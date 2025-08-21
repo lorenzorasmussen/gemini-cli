@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running lint-staged for staged files..."
+npx lint-staged
+
+# Uncomment to enable stricter gates (slower):
+# echo "Running typecheck..."
+# npm run typecheck --silent
+# echo "Running unit tests (fast)..."
+# npm run test --silent --workspaces --if-present

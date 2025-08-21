@@ -39,3 +39,24 @@ packages/*/coverage/
 packages/cli/src/generated/
 .integration-tests/
 packages/vscode-ide-companion/*.vsix
+
+# Project-local ignored directories and files
+.local/
+venv/
+.vscode/
+.qodo/
+
+# Refact project secrets
+.refact/secrets.yaml
+
+# Project-local ignored directories and files
+.local/
+venv/
+.vscode/
+.qodo/
+
+# Refact project secrets
+.refact/secrets.yaml
+
+# Ignore Continue extension directory
+.continue/

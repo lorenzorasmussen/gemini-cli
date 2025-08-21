@@ -1,0 +1,4 @@
+# Ignore local-only overrides and secrets in project
+secrets.yaml
+# Allow variables.yaml to be versioned
+!variables.yaml

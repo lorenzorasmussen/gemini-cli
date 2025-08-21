@@ -1,12 +1,19 @@
-# Config for the Gemini Pull Request Review Bot.
-# https://github.com/marketplace/gemini-code-assist
-have_fun: false
-code_review:
-  disable: false
-  comment_severity_threshold: HIGH
-  max_review_comments: -1
-  pull_request_opened:
-    help: false
-    summary: true
-    code_review: true
-ignore_patterns: []
+google_drive_path: "/Users/lorenzorasmussen/Library/CloudStorage/GoogleDrive-lorenzo.rasmussen@gmail.com"
+ollama_models:
+  gemma3_4b: "gemma3:4b"
+  all_minilm: "all-minilm:33m"
+  moondream_1_8b: "moondream:1.8b"
+  qwen3_reranker: "dengcao/Qwen3-Reranker-0.6B:Q8_0"
+nesting_depth_threshold: 15
+similarity_score_threshold: 0.85
+cache_dir: "~/.gemini/cache/google_drive_guardian/"
+reports_dir: "~/.gemini/reports/google_drive_guardian/"
+progress_report_file: "~/.gemini/tasks/google_drive_guardian_progress.md"
+performance:
+  batch_size: 100
+  max_concurrent_ollama: 3
+  memory_threshold_mb: 2048
+copenhagen_context:
+  work_hours: "09:00-17:00"
+  intensive_processing_window: "02:00-06:00"
+  energy_mode: "eco"
