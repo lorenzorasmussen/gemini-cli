@@ -10,7 +10,7 @@
     "incremental": true,
     "declaration": true,
     "allowSyntheticDefaultImports": true,
-    "lib": ["ES2023"],
+    "lib": ["ESNext"],
     "module": "NodeNext",
     "moduleResolution": "nodenext",
     "target": "es2022",
