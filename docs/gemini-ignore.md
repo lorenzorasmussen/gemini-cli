@@ -33,7 +33,7 @@ To add a file or directory to `.geminiignore`:
 
 You can use `.geminiignore` to ignore directories and files:
 
-```
+```gitignore
 # Exclude your /packages/ directory and all subdirectories
 /packages/
 
@@ -43,14 +43,14 @@ apikeys.txt
 
 You can use wildcards in your `.geminiignore` file with `*`:
 
-```
+```gitignore
 # Exclude all .md files
 *.md
 ```
 
 Finally, you can exclude files and directories from exclusion with `!`:
 
-```
+```gitignore
 # Exclude all .md files except README.md
 *.md
 !README.md
