@@ -1,1 +1,46 @@
-{}
+{ 
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/.local": true,
+    "**/.qodo": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/venv": true,
+    "**/.local": true,
+    "**/.qodo": true
+  },
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "mysql.host": "$MYSQL_HOST",
+  "mysql.port": "$MYSQL_PORT",
+  "mysql.database": "$MYSQL_DATABASE",
+  "mysql.user": "$MYSQL_USER",
+  "mysql.password": "$MYSQL_PASSWORD",
+  "mysql.binaryPath": "$MYSQL_BINARY_PATH"
+    --- a/.refact/secrets.yaml
+    "mysql":
+    "host": $MYSQL_HOST
+    "port": $MYSQL_PORT
+    "database": $MYSQL_DATABASE
+    "user": $MYSQL_USER
+    "password": $MYSQL_PASSWORD
+    "binaryPath": $MYSQL_BINARY_PATH
+  }
+  availability:
+    on_your_laptop: true
+    when_isolated: false
+  confirmation:
+    ask_user: []
+    deny: []
+  MYSQL_HOST: 127.0.0.1
+  MYSQL_PORT: 3306
+  MYSQL_USER: root
+  MYSQL_DATABASE: mysql
+  MYSQL_PASSWORD: password
+  MYSQL_BINARY_PATH: /usr/local/bin/mysql
+  }
+ 

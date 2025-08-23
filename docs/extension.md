@@ -6,8 +6,8 @@ Gemini CLI supports extensions that can be used to configure and extend its func
 
 On startup, Gemini CLI looks for extensions in two locations:
 
-1. `<workspace>/.gemini/extensions`
-2. `<home>/.gemini/extensions`
+1.  `<workspace>/.gemini/extensions`
+2.  `<home>/.gemini/extensions`
 
 Gemini CLI loads all extensions from both locations. If an extension with the same name exists in both locations, the extension in the workspace directory takes precedence.
 
@@ -67,8 +67,8 @@ Would provide these commands:
 
 Extension commands have the lowest precedence. When a conflict occurs with user or project commands:
 
-1. **No conflict**: Extension command uses its natural name (e.g., `/deploy`)
-2. **With conflict**: Extension command is renamed with the extension prefix (e.g., `/gcp.deploy`)
+1.  **No conflict**: Extension command uses its natural name (e.g., `/deploy`)
+2.  **With conflict**: Extension command is renamed with the extension prefix (e.g., `/gcp.deploy`)
 
 For example, if both a user and the `gcp` extension define a `deploy` command:
 
