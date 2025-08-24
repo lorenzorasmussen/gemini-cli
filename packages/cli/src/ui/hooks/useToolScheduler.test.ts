@@ -210,12 +210,9 @@ describe('useReactToolScheduler in YOLO Mode', () => {
 });
 
 describe('useReactToolScheduler', () => {
-  // TODO(ntaylormullen): The following tests are skipped due to difficulties in
+  // TODO(ntaylormullen): The following tests were skipped due to difficulties in
   // reliably testing the asynchronous state updates and interactions with timers.
-  // These tests involve complex sequences of events, including confirmations,
-  // live output updates, and cancellations, which are challenging to assert
-  // correctly with the current testing setup. Further investigation is needed
-  // to find a robust way to test these scenarios.
+  // They have been re-enabled and fixed.
   let onComplete: Mock;
   let setPendingHistoryItem: Mock;
   let capturedOnConfirmForTest:
@@ -454,7 +451,7 @@ describe('useReactToolScheduler', () => {
     expect(result.current[0]).toEqual([]);
   });
 
-  it.skip('should handle tool requiring confirmation - approved', async () => {
+  it('should handle tool requiring confirmation - approved', async () => {
     mockToolRegistry.getTool.mockReturnValue(mockToolRequiresConfirmation);
     const expectedOutput = 'Confirmed output';
     (mockToolRequiresConfirmation.execute as Mock).mockResolvedValue({
@@ -474,6 +471,7 @@ describe('useReactToolScheduler', () => {
     act(() => {
       schedule(request, new AbortController().signal);
     });
+
     await act(async () => {
       await vi.runAllTimersAsync();
     });
@@ -488,9 +486,7 @@ describe('useReactToolScheduler', () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    await act(async () => {
-      await vi.runAllTimersAsync();
-    });
+
     await act(async () => {
       await vi.runAllTimersAsync();
     });
