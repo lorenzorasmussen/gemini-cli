@@ -2,8 +2,13 @@
   description = "Gemini CLI flake for Nix development environment";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05"; # Stable channel for most packages
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable"; # Unstable for packages not in stable
+    # The nixpkgs repository from the NixOS project contains packages for many
+    # operating systems, including macOS (darwin). We use the stable release
+    # branch for reliability.
+    nixpkgs.url = "github:NixOS/nixpkgs/release-24.05";
+    # We also need the unstable channel for packages not yet in the stable release.
+    # 'nixpkgs-unstable' is the conventional, platform-agnostic name for this channel.
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
