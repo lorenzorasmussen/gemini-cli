@@ -1,0 +1,272 @@
+{
+  "model": "gemini-2.5-pro",
+  "fallback_model": "gemini-2.5-flash",
+  "temperature": 0.7,
+  "max_tokens": 8192,
+  "workspace_root": ".",
+  "rulebook_version": "2.0.0",
+  "lorenzo_rasmussen_profile": {
+    "role": "Senior AI Architecture & Security Consultant",
+    "domain": "Hospitality Digital Innovation + AI Security",
+    "location": "Copenhagen, Denmark",
+    "specialization": [
+      "AI Strategy",
+      "Security Framework",
+      "Nordic Innovation",
+      "Automated Refactoring"
+    ],
+    "experience_level": "8+ years",
+    "methodology": "Security-first development with Nordic sustainability principles",
+    "decision_framework": "Performance-first with accessibility compliance"
+  },
+  "security": {
+    "level": "strict",
+    "rules": {
+      "block_dangerous_commands": true,
+      "blocked_commands_list": [
+        "rm -rf", "sudo rm", "format", "dd if=", ":(){ :|:& };:", "chmod 777",
+        "chown root", "sudo chmod", "sudo chown", "kill -9", "killall", "pkill",
+        "shutdown", "reboot"
+      ],
+      "protect_directories": true,
+      "protected_paths_list": [
+        "/usr", "/etc", "/var", "/System", "/Library"
+      ],
+      "require_confirmation_for": [
+        "delete", "move", "copy", "git push", "git merge", "npm publish"
+      ]
+    },
+    "validation": {
+      "max_file_size": "1000MB",
+      "secret_detection_enabled": true,
+      "secret_patterns": [
+        "(?i)(api[-]?key|secret|token|password)\\s*[:=]\\s*['\"]?([a-zA-Z0-9-]+)['\"]?",
+        "(?i)(bearer\\s+)?[a-zA-Z0-9_-]{20,}",
+        "(?i)sk-[a-zA-Z0-9]{48}",
+        "(?i)ghp_[a-zA-Z0-9]{36}",
+        "(?i)aws_access_key_id\\s*[:=]\\s*['\"]?[A-Z0-9]{20}['\"]?",
+        "(?i)aws_secret_access_key\\s*[:=]\\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?"
+      ],
+      "env_file_protection_enabled": true,
+      "code_injection_prevention_enabled": true,
+      "dependency_validation_enabled": true
+    },
+    "hooks": {
+      "eslint_strict_mode": true,
+      "pre_commit_hooks_enabled": true
+    }
+  },
+  "resilience": {
+    "periodic_saving": {
+      "enabled": true,
+      "interval_seconds": 300,
+      "temp_path": "./.gemini/cache/temp_results/"
+    },
+    "checkpointing": {
+      "enabled": true,
+      "checkpoint_path": "./.gemini/cache/checkpoints/"
+    },
+    "rollbacks": {
+      "enabled": true,
+      "staging_path": "./.gemini/cache/staging/"
+    }
+  },
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": "*",
+      "command": "./scripts/primary-pre-tool-enforcer.sh",
+      "required": true,
+      "description": "Consolidated hook for all pre-tool-use validations."
+    },
+    {
+      "event": "PostToolUse",
+      "matcher": "*",
+      "command": "./scripts/primary-post-tool-dispatcher.sh",
+      "required": true,
+      "description": "Consolidated hook for all post-tool-use actions."
+    },
+    {
+      "event": "PreSession",
+      "matcher": "*",
+      "command": "./scripts/read-gemini-documentation.sh",
+      "required": true,
+      "description": "Enforce AI Rulebook Rules 1-2: Objective Definition + Role Assignment"
+    },
+    {
+      "event": "PostSession",
+      "matcher": "*",
+      "command": "./scripts/primary-post-session-dispatcher.sh",
+      "required": true,
+      "description": "Consolidated hook for all end-of-session actions."
+    },
+    {
+      "event": "PreModelSwitch",
+      "matcher": "*",
+      "command": "./scripts/validate-model-switch.sh",
+      "required": true,
+      "description": "Force documentation re-read on model changes"
+    },
+    {
+      "event": "Stop",
+      "matcher": "*",
+      "command": "./scripts/finalize-ai-session.sh",
+      "required": true,
+      "description": "Final cleanup and comprehensive logging before shutdown."
+    }
+  ],
+  "logging": {
+    "level": "info",
+    "format": "simple",
+    "timestamp": true
+  },
+  "memory": {
+    "enabled": true,
+    "memory_bank_path": "./.gemini/memory/",
+    "memory_bank_json": "./.gemini/memory/memory_bank.json",
+    "feedback_analysis": "./.gemini/memory/feedback-analysis.jsonl",
+    "security_learning": "./.gemini/memory/security-learning.jsonl",
+    "refactoring_learning": "./.gemini/memory/refactoring-learning.jsonl",
+    "max_context_length": 150000,
+    "rotation_percentage": 0.1,
+    "cross_project_sharing": true
+  },
+  "header": {
+    "theme": "Default",
+    "model": "gemini-2.5-flash",
+    "checkpointing": { "enabled": true },
+    "yolo": false,
+    "vimMode": true,
+    "includeDirectories": ["src", "docs"],
+    "chatCompression": { "enabled": true },
+    "sandbox": true,
+    "sandbox_type": "nix",
+    "name": "eMCP SuperAssistant Proxy - Optimized Production Configuration v2.0",
+    "description": "Production configuration with corrected timeouts and resilient fallbacks.",
+    "version": "2.0.0",
+    "environment": "production"
+  },
+  "mcpServers": {
+    "example-local": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@vendor/example-mcp"],
+      "trust": false
+    }
+  },
+  "services": {
+    "mem0": {
+      "url": "http://localhost:11212",
+      "description": "Placeholder for our future cloud-hosted mem0 service."
+    }
+  },
+  "proxy": {
+    "enabled": true,
+    "host": "localhost",
+    "port": 3006,
+    "path": "/mcp",
+    "transport": "streamableHttp",
+    "cors": {
+      "enabled": true,
+      "origin": "*",
+      "methods": ["GET", "POST", "OPTIONS"],
+      "headers": ["Content-Type", "Authorization"]
+    }
+  },
+  "environment": {
+    "required_python_pattern": "./.venv/bin/python",
+    "absolute_path_enforcement": true,
+    "virtual_env_required": true,
+    "workspace_isolation": true
+  },
+  "advanced_features": {
+    "rule_16_multimodal": {
+      "enabled": true,
+      "cache_path": "./.gemini/mcp-cache/multimodal/",
+      "max_image_size": "1000MB",
+      "supported_formats": ["png", "jpg", "svg", "webp", "pdf"],
+      "text_analysis": true,
+      "code_analysis": true,
+      "documentation_integration": true
+    },
+    "rule_17_adaptive_learning": {
+      "enabled": true,
+      "memory_rotation": "10_percent",
+      "rotation_frequency": "daily",
+      "learning_model": "importance_weighted",
+      "success_pattern_retention": true,
+      "failure_pattern_learning": true
+    },
+    "ai_refactoring_engine": {
+      "enabled": true,
+      "bloat_threshold": 0.7,
+      "automation_level": "semi_automated",
+      "accessibility_validation": true
+    }
+  },
+  "decision_points": {
+    "refactoring_threshold": 0.7,
+    "automation_approval_required": true,
+    "learning_feedback_frequency": "continuous"
+  },
+  "quality_metrics": {
+    "error_detection_rate": ">90%",
+    "path_compliance": "100%",
+    "security_scan_success": "100%",
+    "memory_retrieval_efficiency": "<100ms"
+  },
+  "performance_targets": {
+    "response_time": {
+      "p50": "< 100ms",
+      "p95": "< 500ms",
+      "p99": "< 1000ms"
+    },
+    "throughput": {
+      "requests_per_second": 100,
+      "concurrent_sessions": 50
+    },
+    "resource_limits": {
+      "memory_usage": "< 512MB",
+      "cpu_utilization": "< 70%"
+    }
+  },
+  "google_models": [
+    "gemini-1.5-pro",
+    "Gemini Ultra",
+    "Gemini Pro",
+    "Gemini Flash",
+    "Gemini Nano",
+    "Gemma 2 (9B, 27B)",
+    "Gemma 3 (1B, 4B, 12B, 27B)",
+    "ShieldGemma 2",
+    "MedGemma (4B, 27B)",
+    "DolphinGemma",
+    "CodeGemma (2B, 7B)",
+    "PaLM",
+    "PaLM 2 (Legacy)"
+  ],
+  "theme": "Ayu",
+  "selectedAuthType": "oauth-personal",
+  "slash_commands": {
+    "plan": {
+      "name": "plan",
+      "description": "Create detailed execution plan before implementation",
+      "prompt": "You are now in PLANNING MODE. For the following request: {{args}}\nPlease provide:\n1. Analysis: Break down the request into actionable tasks\n2. Dependencies: Identify required MCP servers and tools\n3. Risk Assessment: Highlight potential issues and mitigations\n4. Execution Plan: Numbered steps with validations\n5. Approval Request: Type 'APPROVED' to proceed"
+    },
+    "execute": {
+      "name": "execute",
+      "description": "Execute approved plan with monitoring and self-correction",
+      "prompt": "Execute the previously approved plan following these guidelines:\n- Initialize required MCP servers using @server_name syntax\n- Validate each step with progress updates\n- Auto-retry failed operations and rollback if necessary\n- Log actions to ./.gemini/logs/execution.log"
+    },
+    "mcp_health": {
+      "name": "mcp:health",
+      "description": "Check and repair MCP server health",
+      "prompt": "Perform a comprehensive MCP server health check:\n1. List all configured servers\n2. Validate connectivity and response times\n3. Verify tool availability\n4. Auto-repair any failed servers and generate a health report"
+    },
+    "optimize": {
+      "name": "optimize",
+      "description": "Proactive system optimization and maintenance",
+      "prompt": "Conduct performance analysis and maintenance:\n- Review logs in ./.gemini/logs/\n- Identify slow or failing operations\n- Suggest timeout adjustments and optimization recommendations\n- Clean up old cache files in ./.gemini/cache/"
+    }
+  }
+}

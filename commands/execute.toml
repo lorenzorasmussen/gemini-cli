@@ -1,0 +1,23 @@
+name = "execute" 
+description = "Execute approved plan with monitoring and self-correction"
+
+prompt = """
+Execute the previously approved plan with these requirements:
+
+**Execution Guidelines:**
+- Start required MCP servers automatically using @server_name syntax
+- Validate each step before proceeding to the next
+- Log all actions to .gemini/logs/execution.log
+- If any step fails, analyze the error and propose corrections
+- Provide progress updates after each major step
+
+**Self-Correction Protocol:**
+- Monitor tool responses for errors or unexpected results  
+- Automatically retry failed operations with modified approach
+- Rollback changes if critical failures occur
+- Document all corrections in execution log
+
+**Arguments:** {{args}}
+
+Begin execution now, starting with MCP server initialization.
+"""

@@ -1,0 +1,22 @@
+name = "mcp:health"
+description = "Check and repair MCP server health"
+
+prompt = """
+Perform comprehensive MCP server health check:
+
+1. **Server Status Check**: Use /mcp command to list all configured servers
+2. **Connection Validation**: Test each server's responsiveness  
+3. **Tool Availability**: Verify all expected tools are available
+4. **Performance Check**: Measure response times for each server
+5. **Auto-Repair**: Restart any failed servers automatically
+
+**Health Report Format:**
+Server: filesystem
+Status: ✅ Healthy | ⚠️ Warning | ❌ Failed
+Response Time: XXXms
+Available Tools: [list]
+Issues: [if any]
+Actions Taken: [repairs performed]
+
+Generate health report for all configured MCP servers.
+"""

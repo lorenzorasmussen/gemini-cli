@@ -1,0 +1,30 @@
+name = "optimize"
+description = "Proactive system optimization and maintenance"
+
+prompt = """
+Perform proactive system optimization:
+
+**Performance Analysis:**
+- Review .gemini/logs/ for performance patterns
+- Identify slow or failing operations  
+- Analyze resource usage trends
+
+**Configuration Optimization:**
+- Review MCP server configurations for efficiency
+- Suggest timeout adjustments based on historical performance
+- Recommend tool inclusion/exclusion optimizations
+
+**Maintenance Tasks:**
+- Clean up old cache files in .gemini/cache/
+- Rotate logs if they exceed size limits
+- Update MCP server configurations if needed
+
+**Predictive Actions:**
+- Identify patterns that lead to failures
+- Preload frequently used MCP servers
+- Suggest workflow improvements
+
+**Arguments (optional):** {{args}}
+
+Generate optimization report with actionable recommendations.
+"""
