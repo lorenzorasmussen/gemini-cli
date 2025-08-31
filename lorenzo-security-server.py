@@ -8,6 +8,7 @@ Version: 1.1.0
 import asyncio
 import json
 import logging
+import re
 import os
 from pathlib import Path
 
@@ -17,7 +18,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 SERVER_NAME = "lorenzo-security"
-SERVER_VERSION = "1.1.0"
+SERVER_VERSION = "1.2.0"
 
 server = Server(SERVER_NAME)
 
@@ -25,6 +26,25 @@ server = Server(SERVER_NAME)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(server.name)
 
+def _load_secret_patterns() -> list[str]:
+    """Loads secret detection patterns from settings.json."""
+    # The settings file is in the parent's parent directory of the script
+    # e.g., script is in .gemini/scripts/, settings.json is in .gemini/
+    settings_path = Path(__file__).resolve().parent.parent / 'settings.json'
+    if not settings_path.exists():
+        logger.warning(f"settings.json not found at {settings_path}. Using empty patterns list.")
+        return []
+    try:
+        with open(settings_path, 'r') as f:
+            settings = json.load(f)
+        patterns = settings.get("security", {}).get("validation", {}).get("secret_patterns", [])
+        logger.info(f"Loaded {len(patterns)} secret patterns.")
+        return patterns
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Failed to load or parse settings.json: {e}")
+        return []
+
+SECRET_PATTERNS = _load_secret_patterns()
 
 def _validate_path(file_path: str) -> Path:
     """
@@ -39,22 +59,57 @@ def _validate_path(file_path: str) -> Path:
     if workspace_root not in resolved_path.parents and resolved_path != workspace_root:
         raise ValueError(f"Path traversal attempt blocked. Path '{file_path}' is outside the allowed workspace.")
 
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"File not found: {resolved_path}")
+
     return resolved_path
 
 
 async def _run_security_scan(arguments: dict) -> str:
-    """Handles the logic for the security_scan tool."""
+    """
+    Handles the logic for the security_scan tool.
+    This implementation reads a file and scans it for secrets based on regex patterns.
+    """
     file_path = arguments['file_path']
     scan_type = arguments['scan_type']
     logger.info(f"Initiating security scan for '{file_path}' (type: {scan_type}).")
 
+    if scan_type != "secrets":
+        logger.warning(f"Unsupported scan_type '{scan_type}' requested.")
+        return json.dumps({
+            "file_path": file_path,
+            "status": "SKIPPED",
+            "reason": f"Scan type '{scan_type}' is not implemented. Only 'secrets' is supported."
+        })
+
     validated_path = _validate_path(file_path)
 
-    # In a real implementation, you would call an external script or library here.
-    # e.g., proc = await asyncio.create_subprocess_exec('semgrep', 'scan', str(validated_path))
-    # await proc.wait()
-    logger.info(f"Security scan completed for '{validated_path}'.")
-    return f"Security scan of {file_path} for {scan_type}: PASSED"
+    try:
+        with open(validated_path, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+    except Exception as e:
+        logger.error(f"Could not read file {validated_path}: {e}")
+        return json.dumps({"file_path": file_path, "status": "ERROR", "reason": f"Failed to read file: {e}"})
+
+    if not SECRET_PATTERNS:
+        logger.warning("No secret patterns loaded. Cannot perform scan.")
+        return json.dumps({"file_path": file_path, "status": "SKIPPED", "reason": "No secret patterns were loaded from configuration."})
+
+    findings = []
+    for i, line in enumerate(content.splitlines(), 1):
+        for pattern in SECRET_PATTERNS:
+            if re.search(pattern, line):
+                findings.append({"line_number": i, "line_content": line.strip()})
+                # Found a secret on this line, no need to check other patterns for the same line
+                break
+
+    if findings:
+        report = {"file_path": file_path, "status": "SECRETS_FOUND", "findings": findings}
+        logger.warning(f"Secrets found in '{file_path}'.")
+        return json.dumps(report, indent=2)
+    else:
+        logger.info(f"No secrets found in '{file_path}'.")
+        return json.dumps({"file_path": file_path, "status": "PASSED"}, indent=2)
 
 
 async def _run_ai_refactor(arguments: dict) -> str:
@@ -75,7 +130,7 @@ async def handle_list_tools() -> list[Tool]:
     return [
         Tool(
             name="security_scan",
-            description="Scan files for security vulnerabilities using Nordic security standards",
+            description="Scan files for security vulnerabilities using Nordic security standards. Returns a JSON report.",
             inputSchema={
                 "type": "object",
                 "properties": {

@@ -1,5 +1,6 @@
 # Ignore local environment variables
 .env
+!.env.example
 
 # Ignore sensitive credentials and tokens
 oauth_creds.json
@@ -14,5 +15,11 @@ cache/
 .DS_Store
 .vscode/
 
+# Ignore editor history
+.history/
+
 # Ignore nested git repository
 gemini-autonomous/
+
+# Do not ignore the flake lock file
+!flake.lock

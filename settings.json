@@ -1,10 +1,410 @@
 {
+  "header": {
+    "name": "Lorenzo's Ultimate Autonomous AI System",
+    "description": "Production-ready Gemini CLI with planning, self-healing MCP management, and Nordic security",
+    "version": "4.0.0",
+    "environment": "autonomous_production"
+  },
+  "theme": "Ayu",
+  "selectedAuthType": "oauth-personal",
   "model": "gemini-2.5-pro",
   "fallback_model": "gemini-2.5-flash",
   "temperature": 0.7,
   "max_tokens": 8192,
-  "workspace_root": ".",
-  "rulebook_version": "2.0.0",
+  "checkpointing": {
+    "enabled": true,
+    "path": ".gemini/checkpoints",
+    "auto_checkpoint_frequency": 300
+  },
+  "sandbox": true,
+  "yolo": false,
+  "vimMode": true,
+  "chatCompression": {
+    "enabled": true
+  },
+  "includeDirectories": [
+    "src",
+    "docs",
+    "scripts",
+    "tests"
+  ],
+  "workspace_root": "./",
+  "context_files": {
+    "system_context": "./agents.md",
+    "rules_context": "./system.md",
+    "read_on_startup": true,
+    "read_on_model_switch": true,
+    "read_on_context_reset": true
+  },
+  "mcpServers": {
+    "filesystem": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#filesystem",
+        "--"
+      ],
+      "timeout": 15000,
+      "trust": false,
+      "includeTools": [
+        "read_file",
+        "write_file",
+        "create_directory",
+        "list_directory",
+        "move_file",
+        "delete_file"
+      ],
+      "description": "Safe filesystem operations with security validation",
+      "auto_start": true,
+      "health_check": true
+    },
+    "github": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#github",
+        "--"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
+      },
+      "timeout": 20000,
+      "trust": false,
+      "includeTools": [
+        "create_issue",
+        "create_pr",
+        "search_repositories",
+        "get_repo_info",
+        "create_branch",
+        "merge_pr"
+      ],
+      "description": "GitHub repository management and automation",
+      "auto_start": true,
+      "health_check": true
+    },
+    "sqlite": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#sqlite",
+        "--"
+      ],
+      "timeout": 25000,
+      "trust": false,
+      "includeTools": [
+        "execute_query",
+        "create_table",
+        "insert_data",
+        "analyze_schema",
+        "backup_database"
+      ],
+      "description": "SQLite database operations and analysis",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "postgres": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#postgres",
+        "--"
+      ],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      },
+      "timeout": 30000,
+      "trust": false,
+      "includeTools": [
+        "execute_query",
+        "get_schema",
+        "create_migration",
+        "analyze_performance"
+      ],
+      "description": "PostgreSQL database management for enterprise data",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "kubernetes": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#kubernetes",
+        "--"
+      ],
+      "timeout": 30000,
+      "trust": false,
+      "includeTools": [
+        "get_pods",
+        "describe_resource",
+        "apply_manifest",
+        "get_logs",
+        "scale_deployment"
+      ],
+      "description": "Kubernetes cluster management and monitoring",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "docker": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#docker",
+        "--"
+      ],
+      "timeout": 25000,
+      "trust": false,
+      "includeTools": [
+        "list_containers",
+        "run_container",
+        "build_image",
+        "inspect_container",
+        "cleanup_images"
+      ],
+      "description": "Docker container lifecycle management",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "openapi": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:janwilmake/openapi-mcp-server",
+        "--"
+      ],
+      "timeout": 20000,
+      "trust": false,
+      "includeTools": [
+        "analyze_spec",
+        "generate_client",
+        "validate_response",
+        "test_endpoint"
+      ],
+      "description": "OpenAPI specification analysis and API testing",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "memory": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#memory",
+        "--"
+      ],
+      "timeout": 15000,
+      "trust": false,
+      "includeTools": [
+        "store_memory",
+        "retrieve_memory",
+        "search_memory",
+        "update_memory"
+      ],
+      "description": "Persistent memory and knowledge management",
+      "auto_start": true,
+      "health_check": true
+    },
+    "time": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#time",
+        "--"
+      ],
+      "timeout": 10000,
+      "trust": false,
+      "includeTools": [
+        "get_current_time",
+        "schedule_task",
+        "set_reminder",
+        "timezone_convert"
+      ],
+      "description": "Time management and scheduling utilities",
+      "auto_start": true,
+      "health_check": true
+    },
+    "git": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#git",
+        "--"
+      ],
+      "timeout": 20000,
+      "trust": false,
+      "includeTools": [
+        "git_commit",
+        "git_branch",
+        "git_merge",
+        "git_log",
+        "git_diff",
+        "git_status"
+      ],
+      "description": "Local Git repository management",
+      "auto_start": true,
+      "health_check": true
+    },
+    "npm": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#npm",
+        "--"
+      ],
+      "timeout": 30000,
+      "trust": false,
+      "includeTools": [
+        "install_package",
+        "run_script",
+        "list_packages",
+        "update_packages",
+        "audit_security"
+      ],
+      "description": "Node.js package management and security auditing",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "python": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:modelcontextprotocol/servers#python",
+        "--"
+      ],
+      "timeout": 25000,
+      "trust": false,
+      "includeTools": [
+        "execute_python",
+        "install_pip",
+        "create_venv",
+        "run_tests"
+      ],
+      "description": "Python code execution and environment management",
+      "auto_start": false,
+      "load_on_demand": true
+    },
+    "security_scanner": {
+      "command": "python3",
+      "args": [
+        ".gemini/scripts/lorenzo-security-mcp.py"
+      ],
+      "timeout": 30000,
+      "trust": false,
+      "includeTools": [
+        "security_scan",
+        "vulnerability_check",
+        "compliance_audit",
+        "ai_refactor"
+      ],
+      "description": "Lorenzo's Nordic security framework and AI refactoring",
+      "auto_start": true,
+      "health_check": true
+    },
+    "context7": {
+      "httpUrl": "https://mcp.context7.com/mcp",
+      "timeout": 10000,
+      "trust": false,
+      "includeTools": [
+        "get_docs",
+        "search_docs",
+        "get_examples"
+      ],
+      "description": "Always up-to-date framework and library documentation",
+      "auto_start": true,
+      "health_check": true
+    }
+  },
+  "security": {
+    "level": "strict",
+    "rules": {
+      "block_dangerous_commands": true,
+      "blocked_commands_list": [
+        "rm -rf", "sudo rm", "format", "dd if=", ":(){ :|:& };:", "chmod 777",
+        "chown root", "sudo chmod", "sudo chown", "kill -9", "killall", "pkill",
+        "shutdown", "reboot", "init 0", "halt", "poweroff", "mkfs", "fdisk"
+      ],
+      "protect_directories": true,
+      "protected_paths_list": [
+        "/usr", "/etc", "/var", "/System", "/Library", "/bin", "/sbin",
+        "/Applications", "/Volumes", "/boot"
+      ],
+      "require_confirmation_for": [
+        "delete", "move", "copy", "git push", "git merge", "npm publish"
+      ]
+    },
+    "validation": {
+      "max_file_size": "1000MB",
+      "secret_detection_enabled": true,
+      "secret_patterns": [
+        "(?i)(api[-_]?key|secret|token|password)\\s*[:=]\\s*['\"]?([a-zA-Z0-9\\-_]{8,})['\"]?",
+        "(?i)(bearer\\s+)?[a-zA-Z0-9_-]{20,}",
+        "(?i)sk-[a-zA-Z0-9]{32,}",
+        "(?i)ghp_[a-zA-Z0-9]{36}",
+        "(?i)aws_access_key_id\\s*[:=]\\s*['\"]?[A-Z0-9]{20}['\"]?",
+        "(?i)aws_secret_access_key\\s*[:=]\\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?",
+        "(?i)-----BEGIN\\s+(?:RSA\\s+)?PRIVATE\\s+KEY-----"
+      ],
+      "env_file_protection_enabled": true,
+      "code_injection_prevention_enabled": true,
+      "dependency_validation_enabled": true
+    }
+  },
+  "resilience": {
+    "periodic_saving": {
+      "enabled": true,
+      "interval_seconds": 180,
+      "temp_path": ".gemini/cache/temp_results/",
+      "compression_enabled": true
+    },
+    "checkpointing": {
+      "enabled": true,
+      "checkpoint_path": ".gemini/cache/checkpoints/",
+      "max_checkpoints": 10,
+      "auto_checkpoint_frequency": 300
+    },
+    "rollbacks": {
+      "enabled": true,
+      "staging_path": ".gemini/cache/staging/",
+      "backup_before_rollback": true
+    },
+    "error_recovery": {
+      "retry_attempts": 3,
+      "exponential_backoff": true,
+      "fallback_to_basic_mode": true
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "structured_json",
+    "timestamp": true,
+    "include_performance_metrics": true,
+    "log_path": ".gemini/logs/",
+    "enhanced_logging": {
+      "planning_decisions": true,
+      "execution_traces": true,
+      "mcp_server_health": true,
+      "security_events": true,
+      "performance_metrics": true
+    },
+    "rotation": {
+      "enabled": true,
+      "max_size": "100MB",
+      "max_files": 10
+    }
+  },
+  "memory": {
+    "enabled": true,
+    "memory_bank_path": "./.gemini/memory/",
+    "memory_bank_json": "./.gemini/memory/memory_bank.json",
+    "feedback_analysis": "./.gemini/memory/feedback-analysis.jsonl",
+    "security_learning": "./.gemini/memory/security-learning.jsonl",
+    "refactoring_learning": "./.gemini/memory/refactoring-learning.jsonl",
+    "planning_memory": ".gemini/memory/planning-patterns.jsonl",
+    "execution_memory": ".gemini/memory/execution-strategies.jsonl",
+    "max_context_length": 200000,
+    "rotation_percentage": 0.08,
+    "cross_project_sharing": true,
+    "intelligent_prioritization": true,
+    "semantic_clustering": true
+  },
   "lorenzo_rasmussen_profile": {
     "role": "Senior AI Architecture & Security Consultant",
     "domain": "Hospitality Digital Innovation + AI Security",
@@ -19,320 +419,43 @@
     "methodology": "Security-first development with Nordic sustainability principles",
     "decision_framework": "Performance-first with accessibility compliance"
   },
-  "security": {
-    "level": "strict",
-    "rules": {
-      "block_dangerous_commands": true,
-      "blocked_commands_list": [
-        "rm -rf", "sudo rm", "format", "dd if=", ":(){ :|:& };:", "chmod 777",
-        "chown root", "sudo chmod", "sudo chown", "kill -9", "killall", "pkill",
-        "shutdown", "reboot"
-      ],
-      "protect_directories": true,
-      "protected_paths_list": [
-        "/usr", "/etc", "/var", "/System", "/Library"
-      ],
-      "require_confirmation_for": [
-        "delete", "move", "copy", "git push", "git merge", "npm publish"
-      ]
-    },
-    "validation": {
-      "max_file_size": "1000MB",
-      "secret_detection_enabled": true,
-      "secret_patterns": [
-        "(?i)(api[-]?key|secret|token|password)\\s*[:=]\\s*['\"]?([a-zA-Z0-9-]+)['\"]?",
-        "(?i)(bearer\\s+)?[a-zA-Z0-9_-]{20,}",
-        "(?i)sk-[a-zA-Z0-9]{48}",
-        "(?i)ghp_[a-zA-Z0-9]{36}",
-        "(?i)aws_access_key_id\\s*[:=]\\s*['\"]?[A-Z0-9]{20}['\"]?",
-        "(?i)aws_secret_access_key\\s*[:=]\\s*['\"]?[A-Za-z0-9/+=]{40}['\"]?"
-      ],
-      "env_file_protection_enabled": true,
-      "code_injection_prevention_enabled": true,
-      "dependency_validation_enabled": true
-    },
-    "hooks": {
-      "eslint_strict_mode": true,
-      "pre_commit_hooks_enabled": true
-    }
-  },
-  "resilience": {
-    "periodic_saving": {
-      "enabled": true,
-      "interval_seconds": 300,
-      "temp_path": "./.gemini/cache/temp_results/"
-    },
-    "checkpointing": {
-      "enabled": true,
-      "checkpoint_path": "./.gemini/cache/checkpoints/"
-    },
-    "rollbacks": {
-      "enabled": true,
-      "staging_path": "./.gemini/cache/staging/"
-    }
-  },
-  "hooks": [
-    {
-      "event": "PreToolUse",
-      "matcher": "*",
-      "command": "./scripts/primary-pre-tool-enforcer.sh",
-      "required": true,
-      "description": "Consolidated hook for all pre-tool-use validations."
-    },
-    {
-      "event": "PostToolUse",
-      "matcher": "*",
-      "command": "./scripts/primary-post-tool-dispatcher.sh",
-      "required": true,
-      "description": "Consolidated hook for all post-tool-use actions."
-    },
-    {
-      "event": "PreSession",
-      "matcher": "*",
-      "command": "./scripts/read-gemini-documentation.sh",
-      "required": true,
-      "description": "Enforce AI Rulebook Rules 1-2: Objective Definition + Role Assignment"
-    },
-    {
-      "event": "PostSession",
-      "matcher": "*",
-      "command": "./scripts/primary-post-session-dispatcher.sh",
-      "required": true,
-      "description": "Consolidated hook for all end-of-session actions."
-    },
-    {
-      "event": "PreModelSwitch",
-      "matcher": "*",
-      "command": "./scripts/validate-model-switch.sh",
-      "required": true,
-      "description": "Force documentation re-read on model changes"
-    },
-    {
-      "event": "Stop",
-      "matcher": "*",
-      "command": "./scripts/finalize-ai-session.sh",
-      "required": true,
-      "description": "Final cleanup and comprehensive logging before shutdown."
-    }
-  ],
-  "logging": {
-    "level": "info",
-    "format": "simple",
-    "timestamp": true
-  },
-  "memory": {
-    "enabled": true,
-    "memory_bank_path": "./.gemini/memory/",
-    "memory_bank_json": "./.gemini/memory/memory_bank.json",
-    "feedback_analysis": "./.gemini/memory/feedback-analysis.jsonl",
-    "security_learning": "./.gemini/memory/security-learning.jsonl",
-    "refactoring_learning": "./.gemini/memory/refactoring-learning.jsonl",
-    "max_context_length": 150000,
-    "rotation_percentage": 0.1,
-    "cross_project_sharing": true
-  },
-  "header": {
-    "theme": "Default",
-    "model": "gemini-2.5-flash",
-    "checkpointing": { "enabled": true },
-    "yolo": false,
-    "vimMode": true,
-    "includeDirectories": ["src", "docs", "scripts", "tests"],
-    "chatCompression": { "enabled": true },
-    "sandbox": true,
-    "sandbox_type": "nix",
-    "name": "eMCP SuperAssistant Proxy - Optimized Production Configuration v2.0",
-    "description": "Production configuration with corrected timeouts and resilient fallbacks.",
-    "version": "2.0.0",
-    "environment": "production"
-  },
-  "mcpServers": {
-    "ollama": {
-      "type": "stdio",
-      "command": "ollama",
-      "args": ["serve"],
-      "trust": true,
-      "description": "Local Ollama server for running various models."
-    },
-    "mem0-server": {
-      "type": "stdio",
-      "command": "mem0",
-      "args": ["server", "start"],
-      "trust": true,
-      "description": "Local mem0 server for persistent memory."
-    },
-    "filesystem": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#filesystem", "--"],
-      "timeout": 15000,
-      "trust": false,
-      "includeTools": ["read_file", "write_file", "create_directory", "list_directory"],
-      "description": "Safe filesystem operations with security validation"
-    },
-    "github": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#github", "--"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
-      },
-      "timeout": 20000,
-      "trust": false,
-      "includeTools": ["create_issue", "create_pr", "search_repositories", "get_repo_info"],
-      "description": "GitHub repository management and automation"
-    },
-    "sqlite": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#sqlite", "--"],
-      "timeout": 25000,
-      "trust": false,
-      "includeTools": ["execute_query", "create_table", "insert_data", "analyze_schema"],
-      "description": "SQLite database operations and analysis"
-    },
-    "postgres": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#postgres", "--"],
-      "env": {
-        "DATABASE_URL": "${DATABASE_URL}"
-      },
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": ["execute_query", "get_schema", "create_migration"],
-      "description": "PostgreSQL database management"
-    },
-    "kubernetes": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#kubernetes", "--"],
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": ["get_pods", "describe_resource", "apply_manifest", "get_logs"],
-      "description": "Kubernetes cluster management and monitoring"
-    },
-    "docker": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:modelcontextprotocol/servers#docker", "--"],
-      "timeout": 25000,
-      "trust": false,
-      "includeTools": ["list_containers", "run_container", "build_image", "inspect_container"],
-      "description": "Docker container lifecycle management"
-    },
-    "openapi": {
-      "type": "stdio",
-      "command": "nix",
-      "args": ["run", "github:janwilmake/openapi-mcp-server", "--"],
-      "timeout": 20000,
-      "trust": false,
-      "includeTools": ["analyze_spec", "generate_client", "validate_response"],
-      "description": "OpenAPI specification analysis and testing"
-    },
-    "lorenzo-security": {
-      "type": "stdio",
-      "command": "python3",
-      "args": [
-        ".gemini/lorenzo-security-server.py"
-      ],
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": ["security_scan", "ai_refactor"],
-      "description": "Lorenzo's Nordic security and AI refactoring tools"
-    }
-  },
-  "services": {
-    "mem0": {
-      "url": "http://localhost:11212",
-      "description": "Placeholder for our future cloud-hosted mem0 service."
-    }
-  },
-  "proxy": {
-    "enabled": true,
-    "host": "localhost",
-    "port": 3006,
-    "path": "/mcp",
-    "transport": "streamableHttp",
-    "cors": {
-      "enabled": true,
-      "origin": "*",
-      "methods": ["GET", "POST", "OPTIONS"],
-      "headers": ["Content-Type", "Authorization"]
-    }
-  },
-  "environment": {
-    "required_python_pattern": "./.venv/bin/python",
-    "absolute_path_enforcement": true,
-    "virtual_env_required": true,
-    "workspace_isolation": true
-  },
-  "advanced_features": {
-    "rule_16_multimodal": {
-      "enabled": true,
-      "cache_path": "./.gemini/mcp-cache/multimodal/",
-      "max_image_size": "1000MB",
-      "supported_formats": ["png", "jpg", "svg", "webp", "pdf"],
-      "text_analysis": true,
-      "code_analysis": true,
-      "documentation_integration": true
-    },
-    "rule_17_adaptive_learning": {
-      "enabled": true,
-      "memory_rotation": "10_percent",
-      "rotation_frequency": "daily",
-      "learning_model": "importance_weighted",
-      "success_pattern_retention": true,
-      "failure_pattern_learning": true
-    },
-    "ai_refactoring_engine": {
-      "enabled": true,
-      "bloat_threshold": 0.7,
-      "automation_level": "semi_automated",
-      "accessibility_validation": true
-    }
-  },
-  "decision_points": {
-    "refactoring_threshold": 0.7,
-    "automation_approval_required": true,
-    "learning_feedback_frequency": "continuous"
-  },
-  "quality_metrics": {
-    "error_detection_rate": ">90%",
-    "path_compliance": "100%",
-    "security_scan_success": "100%",
-    "memory_retrieval_efficiency": "<100ms"
-  },
   "performance_targets": {
     "response_time": {
-      "p50": "< 100ms",
-      "p95": "< 500ms",
-      "p99": "< 1000ms"
+      "p50": "< 80ms",
+      "p95": "< 400ms",
+      "p99": "< 800ms"
     },
     "throughput": {
-      "requests_per_second": 100,
-      "concurrent_sessions": 50
+      "requests_per_second": 150,
+      "concurrent_sessions": 75
     },
     "resource_limits": {
-      "memory_usage": "< 512MB",
-      "cpu_utilization": "< 70%"
+      "memory_usage": "< 768MB",
+      "cpu_utilization": "< 60%",
+      "disk_io_limit": "< 100MB/s"
+    },
+    "mcp_targets": {
+      "server_startup_time": "< 5s",
+      "health_check_frequency": 30,
+      "auto_restart_threshold": 3
     }
   },
-  "google_models": [
+  "quality_metrics": {
+    "error_detection_rate": ">95%",
+    "path_compliance": "100%",
+    "security_scan_success": "100%",
+    "memory_retrieval_efficiency": "<75ms",
+    "mcp_server_availability": ">99%",
+    "planning_accuracy": ">90%",
+    "execution_success_rate": ">85%"
+  },
+  "supported_models": [
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
     "gemini-1.5-pro",
-    "Gemini Ultra",
-    "Gemini Pro",
-    "Gemini Flash",
-    "Gemini Nano",
-    "Gemma 2 (9B, 27B)",
-    "Gemma 3 (1B, 4B, 12B, 27B)",
-    "ShieldGemma 2",
-    "MedGemma (4B, 27B)",
-    "DolphinGemma",
-    "CodeGemma (2B, 7B)",
-    "PaLM",
-    "PaLM 2 (Legacy)"
-  ],
-  "theme": "Ayu",
-  "selectedAuthType": "oauth-personal"
+    "gemini-1.5-flash",
+    "gemma-2-9b",
+    "gemma-2-27b",
+    "codeglemma-7b"
+  ]
 }
