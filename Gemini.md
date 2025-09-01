@@ -67,3 +67,30 @@
 [28] https://www.diagrid.io/blog/building-effective-dapr-agents
 [29] https://www.infoq.com/articles/ai-agent-cli/
 - User's preferred less commands and keybindings: They provided the full output of 'less --help' and want me to remember these commands (MOVING, SEARCHING, JUMPING, CHANGING FILES, MISCELLANEOUS COMMANDS, OPTIONS, LINE EDITING) as their preferred way of interacting with 'less'. They expect me to help them by recalling these commands when they ask for help with 'less' or similar tasks.
+- Summary of Useful Info from Thread: Gemini CLI startup issues resolved (disabled npm-based servers, configured security_scanner with Nix). Gemini CLI extension architecture understood (gemini-extension.json, .toml commands, namespacing, MCP integration). Implemented various workflow patterns: general, Nix (dev-setup, multi-deploy, macos-manage), GitHub Actions, Intelligent Orchestration, DevOps, Cross-Tool Integration (hybrid-ai-workflow.sh), Automated File Organization, Security Workflow Verification, State-Aware Command Chaining (analysis commands, workflow_chain.sh), and MCP-Orchestrated Workflows (workflow-state-server.js). Implemented intelligent dependency management for scripts (claude-code, inotifywait, jq, llama.cpp, node, npm). todo-universal.md created/updated. agents.md and CONSTITUTION.md confirmed as policies. less_cheat_sheet.md created. Git repository initialized and committed.
+- New and Unique Insights from Thread: Demonstrated limitations of search_file_content (not finding newly created files/subdirectories) and run_shell_command (no command substitution, no interactivity). Iterative debugging of flake.nix syntax error and discovery of external Nix flake reference issues. Evolution of self-healing logic in scripts. Deep understanding of user's macOS Nix multi-user environment and preferences for Nix-based solutions and agentic workflows. Clarification that Gemini.md is for memory storage, while todo-universal.md is a general context/task file. User's specific preference for less keybindings.
+- Optimization Suggestions for Gemini CLI Workflows:
+
+**1. Shell Startup Time:**
+- **Profile Startup:** Use `zprof` to identify and address bottlenecks in your `~/.zshrc`.
+- **Lazy Loading:** Ensure non-essential Zsh plugins and functions are loaded only when needed.
+
+**2. Resource Usage (CPU/Memory):**
+- **Background Processes:** Verify that long-running scripts (e.g., `chat-monitor.sh`, `chat-history-embedder.sh`) are truly backgrounded and don't consume excessive resources. Monitor their CPU/memory usage.
+- **Efficient Commands:** Review shell commands within your TOML prompts and scripts. Use `awk`, `sed`, `grep`, `jq` efficiently. Avoid unnecessary processing.
+- **Caching Expensive Operations:** Beyond `ollama_blob`, consider caching results of other expensive operations like `git log` or `nix flake metadata` if they are frequently accessed.
+
+**3. LLM Inference Performance:**
+- **Model Quantization:** Experiment with smaller, quantized versions of LLM models (e.g., `phi3:q4_0`) if performance is critical and a slight trade-off in accuracy is acceptable.
+- **Hardware Acceleration:** Ensure your `llama.cpp` build is optimized for your hardware (e.g., Metal for Apple Silicon, CUDA for NVIDIA GPUs). This is typically configured during `llama.cpp` compilation.
+- **Batching Requests:** For embedding or generation tasks, consider batching multiple inputs into a single request to the LLM server to improve throughput, especially for smaller inputs.
+
+**4. Nix Environment Optimization:**
+- **Garbage Collection:** Regularly run `nix-collect-garbage -d` to free up disk space consumed by old Nix store paths.
+- **Optimizing Builds:** Use `nix optimize-store` to deduplicate files in the Nix store, which can save disk space and improve build times.
+- **Binary Caches:** Ensure you have configured and are utilizing appropriate binary caches in your `nix.conf` to avoid rebuilding packages that are already available.
+
+**5. Workflow Efficiency:**
+- **Parallel Execution:** For independent steps within a multi-step workflow, consider running them in parallel using tools like `GNU Parallel` or `xargs -P`.
+- **Conditional Execution:** Implement robust conditional logic in your scripts to skip unnecessary steps based on previous results or environmental checks.
+- **Argument Validation:** Validate command arguments early in your TOML prompts or scripts to prevent unnecessary execution of the entire workflow if inputs are invalid.

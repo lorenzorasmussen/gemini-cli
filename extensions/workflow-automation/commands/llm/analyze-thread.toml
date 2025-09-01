@@ -1,0 +1,43 @@
+description = "Analyzes conversation history using nomic-embed-text and llama.cpp, saving embeddings."
+prompt = """
+**EMBEDDING ANALYSIS OF CONVERSATION HISTORY**
+
+This command will guide you through the process of generating embeddings for your conversation history using the `nomic-embed-text` model via `llama.cpp`.
+
+**Before you begin:**
+
+1.  **Ensure `ollama` is running:** You can start it by typing `ollama serve` in a separate terminal, or by opening the Ollama application on macOS.
+2.  **Ensure `llama.cpp` server is ready:** The script will attempt to start it, but if you encounter issues, check the log at `/Users/lorenzorasmussen/.gemini/llama_server.log`.
+3.  **Ensure `jq` is installed:** It's used for JSON processing. Your `zshrc` should handle this, or you can install it via `nix profile add nixpkgs#jq`.
+4.  **Ensure `uuidgen` is installed:** It's used for generating unique IDs. It's usually available on macOS/Linux.
+
+**Step-by-Step Guide:**
+
+1.  **Open the script:** Open the `run_embedding_analysis.sh` file in a text editor:
+    `/Users/lorenzorasmussen/.gemini/run_embedding_analysis.sh`
+
+2.  **Paste Conversation History:** Locate the `CONVERSATION_HISTORY="""..."""` section. **Carefully paste the entire content of this conversation thread** (your inputs and my outputs) between the triple double-quotes. Ensure proper escaping of any internal double-quotes if necessary (though the script attempts to handle this).
+
+3.  **Save the script.**
+
+4.  **Run the script:** Open your terminal (preferably within the `nix develop` shell where `ollama` and `llama.cpp` are available) and execute the script:
+    `/Users/lorenzorasmussen/.gemini/run_embedding_analysis.sh`
+
+**What the script will do:**
+
+*   It will check for and attempt to install `llama.cpp` if not found.
+*   It will ensure the `nomic-embed-text` model is pulled in Ollama (and use a cached path if available).
+*   It will start the `llama.cpp` server (if not already running).
+*   It will process your pasted conversation history, chunking it by line.
+*   For each line (chunk), it will generate an embedding using `nomic-embed-text` via the `llama.cpp` server.
+*   It will save these embeddings, along with metadata (ID, timestamp, source, chunk text), to:
+    `/Users/lorenzorasmussen/.gemini/thread_embeddings.json`
+*   It will also use a cache file (`/Users/lorenzorasmussen/.gemini/thread_embeddings_cache.json`) to allow for resuming if interrupted.
+
+**After the script completes:**
+
+*   You will find the generated embeddings in `thread_embeddings.json`.
+*   You can then use these embeddings for various downstream tasks, such as semantic search, clustering, or feeding them into other AI models.
+
+This process ensures a smooth transition, as you are manually executing the script and providing the necessary input.
+"""

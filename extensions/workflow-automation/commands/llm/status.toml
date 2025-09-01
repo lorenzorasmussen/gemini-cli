@@ -1,0 +1,18 @@
+description = "Checks the status of the local llama.cpp server."
+prompt = """
+**LLAMA.CPP SERVER STATUS**
+
+Checking llama.cpp server status...
+
+!{
+  if pgrep -f "llama.cpp/server" >/dev/null; then
+    echo "✅ Llama.cpp server is running."
+    echo "Port: 8080"
+    echo "Model: $(pgrep -f "llama.cpp/server" | xargs -I{} ps -o command -p {} | grep -oP '-m \K[^ ]+' | xargs basename)"
+  else
+    echo "❌ Llama.cpp server is NOT running."
+  fi
+}
+
+For a full AI service health check, use the `/hud` command.
+"""
