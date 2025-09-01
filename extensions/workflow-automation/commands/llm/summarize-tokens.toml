@@ -1,0 +1,12 @@
+description = "Summarizes text to a specified token limit."
+prompt = """
+**TEXT SUMMARIZATION WITH TOKEN LIMIT**
+
+Summarizing text to approximately: {{args}} tokens.
+
+(Please provide the text to summarize after invoking the command. The AI will then summarize it to the specified token limit.)
+
+Example usage:
+`/llm:summarize-tokens 100` (then paste text)
+
+"""

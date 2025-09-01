@@ -1,0 +1,10 @@
+description = "Analyzes logs for a specified duration."
+prompt = """
+**LOG ANALYSIS FOR SPECIFIC DURATION**
+
+Analyzing logs for the last: {{args}} (e.g., "24h", "7d", "30m")
+
+!{tail -n 1000 /var/log/syslog | grep "$(date -d "{{args}} ago" +%b %d)"}
+
+Please provide a summary of events within the specified time frame.
+"""

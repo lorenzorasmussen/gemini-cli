@@ -1,0 +1,14 @@
+description = "Logs CPU and memory usage periodically."
+prompt = """
+**SYSTEM RESOURCE MONITORING**
+
+Logging current CPU and memory usage:
+
+**CPU Usage:**
+!{top -l 1 | grep "CPU usage" | awk '{print $3 + $5}'}
+
+**Memory Usage:**
+!{free -h | grep Mem | awk '{print $3"/"$2}'}
+
+Resource usage logged. This command can be scheduled for periodic monitoring.
+"""

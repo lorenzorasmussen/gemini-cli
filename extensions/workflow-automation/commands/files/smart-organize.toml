@@ -12,7 +12,7 @@ Recent modifications: !{find "{{args}}" -type f -mtime -7 -exec ls -lt {} \;}
 !{find "{{args}}" -type f -exec md5sum {} \; | sort | uniq -d -w32}
 
 **Step 3: Organization Strategy**
-Directory structure analysis: !{tree "{{args}}" -d -L 3 | head -20}
+Directory structure analysis: !{tree "{{args}}" -d -L 3}
 Storage usage: !{du -sh "{{args}}"/* | sort -hr}
 
 **Step 4: Safe Organization Plan**

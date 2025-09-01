@@ -1,4 +1,10 @@
 description = "Initializes the workflow automation."
 prompt = """
 Workflow automation initialization started.
+
+**Ensuring essential directories exist:**
+!{mkdir -p ~/.gemini/checkpoints}
+!{mkdir -p ~/.gemini/cache/temp_results}
+
+Directories checked/created.
 """
