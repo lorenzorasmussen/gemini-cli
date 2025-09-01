@@ -66,3 +66,4 @@
 [27] https://docs.mapp.com/docs/multi-step-automation-workflows
 [28] https://www.diagrid.io/blog/building-effective-dapr-agents
 [29] https://www.infoq.com/articles/ai-agent-cli/
+- User's preferred less commands and keybindings: They provided the full output of 'less --help' and want me to remember these commands (MOVING, SEARCHING, JUMPING, CHANGING FILES, MISCELLANEOUS COMMANDS, OPTIONS, LINE EDITING) as their preferred way of interacting with 'less'. They expect me to help them by recalling these commands when they ask for help with 'less' or similar tasks.

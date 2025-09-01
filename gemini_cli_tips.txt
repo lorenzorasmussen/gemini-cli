@@ -1,0 +1,20 @@
+Always use version control for your projects.
+Break down complex tasks into smaller, manageable steps.
+Automate repetitive tasks with scripts.
+Understand your shell's features (aliases, functions, history).
+Use `less` for viewing large files efficiently.
+Master basic `git` commands for effective collaboration.
+Regularly update your system and tools.
+Back up your important data.
+Learn to use `grep` for powerful text searching.
+Utilize `find` for locating files based on various criteria.
+Explore Nix flakes for reproducible development environments.
+Leverage custom slash commands in Gemini CLI for automation.
+Consider MCP servers for complex, stateful workflows.
+Implement error handling in your scripts.
+Document your code and workflows.
+Test your scripts and automations thoroughly.
+Monitor system resources during long-running tasks.
+Sanitize user inputs in scripts for security.
+Use `sudo` only when necessary and understand its implications.
+Explore `jq` for parsing JSON output from commands.
