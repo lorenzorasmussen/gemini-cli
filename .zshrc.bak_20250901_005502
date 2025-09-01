@@ -1,0 +1,2197 @@
+#!/usr/bin/env zsh
+# ==============================================================================
+# ~/.zshrc — Ultimate Agentic, Self-Healing, Nix/XDG/AI/LLM Shell (Unified)
+# ==============================================================================
+zmodload zsh/zprof # Start the profiler immediately
+zmodload zsh/datetime
+integer -g ZSH_STARTUP_TIME_MS=$((EPOCHSECONDS * 1000 + EPOCHREALTIME_NSEC / 1000000))
+
+
+# ==============================================================================
+# This is a single-file version collating all modular components for portability.
+# It includes: Core Env, History, Aliases, Plugins, AI Agent, and Diagnostics.
+# ==============================================================================
+
+# ==============================================================================
+# 10 | CORE ENVIRONMENT & PATH
+# ==============================================================================
+# This foundational layer sets a#!/usr/bin/env zsh
+# ==============================================================================
+# ~/.zshrc — Ultimate Agentic, Self-Healing, Nix/XDG/AI/LLM Shell (Unified)
+# ==============================================================================
+zmodload zsh/zprof # Start the profiler immediately
+zmodload zsh/datetime
+integer -g ZSH_STARTUP_TIME_MS=$((EPOCHSECONDS * 1000 + EPOCHREALTIME_NSEC / 1000000))
+
+
+# ==============================================================================
+# This is a single-file version collating all modular components for portability.
+# It includes: Core Env, History, Aliases, Plugins, AI Agent, and Diagnostics.
+# ==============================================================================
+
+# ==============================================================================
+# 10 | CORE ENVIRONMENT & PATH
+# ==============================================================================
+# This foundational layer sets a failsafe PATH, sources Nix, and establishes
+# the XDG directory standard for a clean, portable, and self-contained setup.
+
+# ~/.zshrc
+if [[ -z "$ZSH_VERSION" ]]; then
+  echo "This file must be sourced from zsh, not $0." >&2
+  return 1
+fi
+    
+# --- Failsafe PATH & Nix Bootstrap ---
+# Ensure critical system binaries are available before anything else.
+# This prevents a broken shell if user configurations are faulty.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+# Source Nix environment if it exists. The `.` command is used for POSIX
+# compatibility, and errors are suppressed to prevent noise if Nix isn't installed.
+if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+  . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' 2>/dev/null
+fi
+if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh" 2>/dev/null
+fi
+
+# --- XDG Base Directory Standard & ZDOTDIR ---
+# Adhere to the XDG standard to keep the home directory clean.
+# Fallback to ~/.config, ~/.cache, etc., if the variables are not already set.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+# Tell Zsh to use its own dedicated XDG-compliant directory.
+# This moves .zsh_history and other Zsh files out of $HOME.
+export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+
+# Ensure all necessary XDG directories exist on startup.
+for dir in "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$ZDOTDIR"; do
+  mkdir -p "$dir"
+done
+
+# --- Language Ecosystem Homes (XDG Compliant) ---
+# Configure common development tools to respect the XDG standard.
+export GOPATH="$XDG_DATA_HOME/go"
+export GOBIN="$GOPATH/bin"
+export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
+export CARGO_HOME="$XDG_DATA_HOME/cargo"
+export NVM_DIR="$XDG_DATA_HOME/nvm"
+export BUN_INSTALL="$XDG_CACHE_HOME/bun" # Bun's cache
+export DENO_DIR="$XDG_DATA_HOME/deno"    # Deno's home
+export PYTHONUSERBASE="$XDG_DATA_HOME/python"
+
+# --- Unified, De-duplicated PATH Construction ---
+# Use `typeset -U path` to automatically handle uniqueness and ordering.
+# Paths are added in order of priority (highest first).
+typeset -U path
+path=(
+  # User-specific binaries
+  "$HOME/.local/bin"
+  "$HOME/scripts"
+  # Language binaries
+  "$GOBIN"
+  "$CARGO_HOME/bin"
+  "$BUN_INSTALL/bin"
+  "$DENO_DIR/bin"
+  "$PYTHONUSERBASE/bin"
+  # Nix binaries (highest priority system-wide)
+  "$HOME/.nix-profile/bin"
+  "/nix/var/nix/profiles/default/bin"
+  "/run/current-system/sw/bin"
+  # System binaries (as a fallback)
+  "/usr/local/bin"
+  "/usr/bin"
+  "/bin"
+  "/usr/local/sbin"
+  "/usr/sbin"
+  "/sbin"
+)
+export PATH
+
+# ----------  Asynchronous Auto-Dependency Installation ----------
+# This runs in the background to avoid blocking the shell startup.
+_async_dep_check() {
+  # This function should only run once per login session.
+  [[ -n "$ZSH_DEPS_CHECKED" ]] && return
+  export ZSH_DEPS_CHECKED=1
+
+  printf '\n--- Dependency Check (running in background) ---\n'
+  missing=()
+  nix_packages_to_install=()
+  command -v llama-server &>/dev/null || { missing+=("llama-server"); nix_packages_to_install+=("nixpkgs#llama-cpp"); } # AI
+  command -v jq &>/dev/null || { missing+=("jq"); nix_packages_to_install+=("nixpkgs#jq"); } # AI
+  command -v zoxide &>/dev/null || { missing+=("zoxide"); nix_packages_to_install+=("nixpkgs#zoxide"); } # Navigation
+  command -v atuin &>/dev/null || { missing+=("atuin"); nix_packages_to_install+=("nixpkgs#atuin"); } # History
+  command -v fkill &>/dev/null || { missing+=("fkill"); nix_packages_to_install+=("nixpkgs#nodePackages.fkill-cli"); } # Process Mgmt
+  command -v ollama &>/dev/null || { missing+=("ollama") } # AI
+  command -v gemini-cli &>/dev/null || { missing+=("gemini-cli"); nix_packages_to_install+=("nixpkgs#gemini-cli"); } # AI
+
+  if (( ${#missing[@]} == 0 )); then
+    echo "✅ All tools present."
+  else
+    echo "❌ Missing: ${missing[*]}. Attempting to install..."
+    if command -v nix &>/dev/null; then
+      if (( ${#nix_packages_to_install[@]} > 0 )); then
+        nix profile add "${nix_packages_to_install[@]}" && \
+        echo "✅ Nix packages installed. Please run 'zshreload' to activate new commands."
+      fi
+      if [[ " ${missing[*]} " =~ " ollama " ]]; then
+          echo "   -> Please install Ollama.app from https://ollama.com"
+          open https://ollama.com
+      fi
+    else
+      echo "⚠️  Nix not found. Cannot auto-install. Please install missing tools manually."
+    fi
+  fi
+  echo "--- Dependency Check Complete ---"
+}
+# Run the check in the background and disown it.
+_async_dep_check &|
+
+# ---------- Self-healing startup-time fix ----------
+autoload -U add-zsh-hook
+
+# _fix_startup_math() {
+#  local bad_line='export ZSH_STARTUP_MS=$(((end_time - ZSH_STARTUP_TIME) / 1000000))'
+#  local good_line='export ZSH_STARTUP_MS=$(( (${end_time:-0} - ${ZSH_STARTUP_TIME:-0}) / 1000000 ))'
+#  local line_no
+#  line_no=$(grep -nF "$bad_line" ~/.zshrc.real | cut -d: -f1)
+
+#  [[ -z $line_no ]] && return 0   # already fixed
+
+ # echo
+ # echo "💡  Found bad math on line $line_no:"
+ # echo "   ${bad_line}"
+ # echo "   ↓ proposed ↓"
+ # echo "   ${good_line}"
+ # read -k1 "REPLY?Apply fix? [y/N] "
+ # echo
+
+ # if [[ $REPLY == y ]]; then
+ #  # create backup
+ #   cp ~/.zshrc.real ~/.zshrc.real.bak.$(date +%s)
+ #  # in-place replacement
+ #   sed -i '' "${line_no}s/.*/${good_line//\//\\/}/" ~/.zshrc.real
+ #  echo "✅  Applied & saved. Restart shell to reload."
+#  fi
+#}
+
+#add-zsh-hook precmd _fix_startup_math
+# --- Core Environment Variables ---
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="$EDITOR"
+export PAGER="${PAGER:-less}"
+export LESS="-R" # Allow color codes in `less`
+export LC_ALL="en_US.UTF-8"
+export LANG="en_US.UTF-8"
+
+# --- Shell Guardian ---
+# This function runs before each prompt to offer proactive help.
+_shell_guardian() {
+  # Guardian 1: Stale Nix Environment
+  # If the user is in a nix-shell and the flake.lock is newer than the shell's start time,
+  # it means dependencies have changed and the environment is stale.
+  if [[ -n "$IN_NIX_SHELL" && -f "flake.lock" && "flake.lock" -nt "$NIX_SHELL_START_TIME_FILE" ]]; then
+    echo "🛡️ ${YELLOW}Guardian: Your Nix dependencies have changed. It's recommended to run 'direnv reload' or restart the shell.${RESET}"
+    # In a more advanced version, you could offer to run it automatically.
+  fi
+
+  # Guardian 2: Missing API Keys for a tool
+  # If the user tries to run a command that needs an API key which isn't set.
+  local last_cmd_name="${history[$HISTCMD]%% *}"
+  if [[ "$last_cmd_name" == "terraform" || "$last_cmd_name" == "pulumi" ]]; then
+    if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+      echo "🛡️ ${YELLOW}Guardian: You're using a cloud tool but no AWS credentials are set. Did you forget to run 'aws sso login'?${RESET}"
+    fi
+  fi
+}
+# Add the guardian to the precmd hook.
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _shell_guardian
+
+# To enable the Nix check, you need to touch a file when direnv loads the shell.
+# Add this to your ~/.config/direnv/direnvrc:
+#
+#   export NIX_SHELL_START_TIME_FILE="$XDG_STATE_HOME/direnv/nix_start_time"
+#   touch "$NIX_SHELL_START_TIME_FILE"
+#
+
+
+# ==============================================================================
+# 20 | PRESCIENT HISTORY & COMPLETIONS
+# ==============================================================================
+# Configures a massive, intelligent history and a lightning-fast, descriptive
+# autocompletion system. This section is self-contained and optimized.
+
+# --- History Configuration (XDG-aware) ---
+export HISTFILE="$ZDOTDIR/.zsh_history" # Stored in ~/.config/zsh/
+export HISTSIZE=1000000
+export SAVEHIST=1000000
+setopt APPEND_HISTORY EXTENDED_HISTORY HIST_EXPIRE_DUPS_FIRST HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_FIND_NO_DUPS HIST_REDUCE_BLANKS INC_APPEND_HISTORY SHARE_HISTORY
+
+# --- Completion System & Shell Options ---
+setopt AUTO_MENU AUTO_PARAM_SLASH COMPLETE_IN_WORD EXTENDED_GLOB NO_BEEP PUSHD_IGNORE_DUPS CORRECT NOTIFY
+autoload -Uz add-zsh-hook
+
+# Initialize the completion system, caching for speed.
+# The cache is rebuilt only if it's older than a week or doesn't exist.
+autoload -Uz compinit
+local comp_cache_file="$XDG_CACHE_HOME/zsh/zcompdump"
+if [[ -n "$comp_cache_file"(#qN.mh+168) ]]; then
+  compinit -i -C -d "$comp_cache_file"
+else
+  compinit -i -d "$comp_cache_file"
+fi
+zmodload -i zsh/complist
+
+# --- Completion Styling ---
+# Make completions look good and provide useful feedback.
+zstyle ':completion:*' menu select
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' use-cache yes
+zstyle ':completion:*' cache-path "$XDG_CACHE_HOME/zsh/zcompcache"
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}' # Case-insensitive matching
+zstyle ':completion:*' rehash true
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:messages' format ' %F{yellow}%d%f'
+zstyle ':completion:*:warnings' format ' %F{red}No matches for:%f %d'
+zstyle ':completion:*:*:*:*:corrections' format ' %F{green}%d (errors: %e)%f'
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+
+# ==============================================================================
+# 30 | ALIASES & HELPER FUNCTIONS
+# ==============================================================================
+# A comprehensive suite of shortcuts and utilities for navigation, file
+# operations, and system management.
+
+    # --- Ephemeral Shell Sandboxing ---
+# Creates a temporary, isolated environment.
+# Usage:
+#   sandbox go nodejs # Drops you in a shell with go and nodejs
+#   sandbox -p python3Packages.requests 'python script.py' # Runs a command inside
+sandbox() {
+  if ! command -v nix >/dev/null; then
+    echo "❌ Nix is required for sandboxing." >&2; return 1
+  fi
+
+  if [[ "$1" == "-p" ]]; then
+    shift
+    local packages=("$1")
+    shift
+    echo "📦 Running command in ephemeral shell with: ${packages[*]}..."
+    nix-shell -p "${packages[@]}" --run "$*"
+  else
+    local packages=("$@")
+    echo "📦 Entering ephemeral shell with: ${packages[*]}..."
+    echo "   Type 'exit' to destroy this environment."
+    nix-shell -p "${packages[@]}"
+  fi
+}
+
+# --- Navigation & Safety ---
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias -- -='cd -' # Go to previous directory
+alias cp='cp -iv'  # Interactive and verbose copy
+alias mv='mv -iv'  # Interactive and verbose move
+alias rm='rm -I'   # Prompt once before removing more than three files
+alias mkdir='mkdir -pv'
+
+# Create a directory and change into it.
+mkcd() {
+  mkdir -p "$1" && cd "$1"
+}
+
+# --- System & Zsh Management ---
+alias h='history'
+alias jbs='jobs -l' # List background jobs
+alias j='zi' # Interactive directory jump using zoxide+fzf
+alias path='echo $PATH | tr : "\n" | nl' # Numbered list of PATH entries
+alias zshconf='${EDITOR:-nvim} $ZDOTDIR/.zshrc'
+alias zshreload='source $ZDOTDIR/.zshrc && echo "✅ zshrc reloaded"'
+
+# --- Smart `ls` with Fallbacks ---
+# Use the best available `ls` replacement, falling back to the system default.
+if command -v lsd >/dev/null; then
+  alias ls='lsd --group-dirs=first --color=always'
+  alias ll='lsd -alF --group-dirs=first --color=always'
+  alias la='lsd -A --group-dirs=first --color=always'
+  alias lt='lsd --tree --depth=3'
+elif command -v exa >/dev/null; then
+  alias ls='exa --group-directories-first --color=always'
+  alias ll='exa -alF --group-directories-first --color=always'
+  alias la='exa -a --group-directories-first --color=always'
+  alias lt='exa --tree --level=3'
+else
+  # System `ls` with color support.
+  if [[ "$OSTYPE" == "darwin"* ]]; then # macOS
+    alias ls='ls -G'
+  else # Linux
+    alias ls='ls --color=auto'
+  fi
+  alias ll='ls -alF'
+  alias la='ls -A'
+fi
+
+# --- Universal Archive Extractor & Backup Utility ---
+# Extracts any archive type automatically.
+extract() {
+  if [[ ! -f "$1" ]]; then
+    echo "'$1' is not a valid file." >&2; return 1
+  fi
+  case "$1" in
+    *.tar.bz2) tar xjf "$1" ;; *.tar.gz) tar xzf "$1" ;;
+    *.bz2) bunzip2 "$1" ;;     *.rar) unrar x "$1" ;;
+    *.gz) gunzip "$1" ;;       *.tar) tar xf "$1" ;;
+    *.tbz2) tar xjf "$1" ;;    *.tgz) tar xzf "$1" ;;
+    *.zip) unzip "$1" ;;       *.Z) uncompress "$1";;
+    *.7z) 7z x "$1" ;;         *.xz) unxz "$1" ;;
+    *.lzma) unlzma "$1" ;;
+    *) echo "'$1' cannot be extracted via extract()" >&2; return 1 ;;
+  esac
+}
+
+# Creates a timestamped backup of a file or directory.
+backup() {
+  local target="$1"
+  if [[ ! -e "$target" ]]; then
+    echo "Error: '$target' does not exist." >&2; return 1
+  fi
+  local backup_name="${target}.backup.$(date +%Y%m%d-%H%M%S)"
+  cp -a "$target" "$backup_name" && echo "✅ Backup created: $backup_name"
+}
+
+# --- Git Workflow Enhancements ---
+alias g='git'
+alias ga='git add'
+alias gaa='git add --all'
+alias gc='git commit -m'
+alias gca='git commit -am'
+alias gs='git status -sb' # Concise status
+alias gp='git push'
+alias gpf='git push --force-with-lease' # Safer force push
+alias gl='git log --oneline --graph --decorate --all' # Pretty log
+alias gd='git diff'
+alias gdc='git diff --cached'
+alias gco='git checkout'
+alias gb='git branch'
+
+# Create a new branch and check it out.
+gnew() {
+  git checkout -b "$1"
+}
+
+# Get the current branch name.
+gbranch() {
+  git rev-parse --abbrev-ref HEAD
+}
+
+# --- Network & IP Information ---
+alias myip='curl -s ipinfo.io/ip'
+alias ports='netstat -tulanp'
+
+# --- Enhanced System & Process Management ---
+# Find a process by name with a clean, readable output.
+# Usage: `psfind ssh`
+psfind() {
+  ps aux | grep -i --color=auto "[${1[1]}]${1[2,-1]}"
+}
+
+# Get a quick overview of memory usage (works on macOS and Linux).
+meminfo() {
+  echo "🧠 ${BOLD}Memory Usage:${RESET}" # Assumes colors are defined later
+  case "$OSTYPE" in
+    darwin*)
+      vm_stat | perl -ne '/page size of (\d+)/ and $ps = $1; /Pages free:\s+(\d+)/ and $free = $1; /Pages active:\s+(\d+)/ and $active = $1; /Pages inactive:\s+(\d+)/ and $inactive = $1; /Pages wired down:\s+(\d+)/ and $wired = $1; END { $total = $ps*($free+$active+$inactive+$wired)/1073741824; $used = $ps*($active+$inactive+$wired)/1073741824; printf("Total: %.2f GB\nUsed:  %.2f GB (%.0f%%)\n", $total, $used, $used*100/$total); }'
+      ;;
+    linux*)
+      free -h
+      ;;
+    *)
+      echo "Unsupported OS for meminfo."
+      ;;
+  esac
+}
+
+# Get a quick weather report from the terminal.
+weather() {
+  local location="${1:-}" # Auto-detects location if empty
+  curl -s "wttr.in/${location}?m"
+}
+
+# --- Advanced Keybindings for FZF & Navigation ---
+# These require fzf and its shell extensions to be sourced by your plugin manager.
+# NOTE: These are placed here, but will only work after fzf is loaded.
+
+# [Ctrl-R] - Fuzzy search command history
+export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:3:wrap --bind 'ctrl-y:execute-silent(echo -n {1..} | pbcopy)+abort'"
+
+# [Ctrl-T] - Fuzzy find files and directories to insert into the command line
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:100 {}'"
+
+# [Alt-C] - Fuzzy find a directory and `cd` into it
+export FZF_ALT_C_OPTS="--preview 'lsd --tree --depth=2 {}'"
+
+# --- Custom Interactive Keybindings ---
+# These functions and bindings add more interactive workflows.
+
+# Interactive process killer using fkill
+fkill-widget() {
+  BUFFER="fkill"
+  zle accept-line
+}
+zle -N fkill-widget
+bindkey '^[k]' fkill-widget # Binds Alt+K to interactive kill
+
+# ==============================================================================
+# 40 | PLUGIN & FZF ARCHITECTURE
+# ==============================================================================
+# Manages the Zsh plugin ecosystem via Zinit and configures the fuzzy finder
+# (FZF) for a modern, interactive experience.
+
+# --- Zinit Plugin Manager Setup ---
+# Set the Zinit home directory to be XDG-compliant.
+local zinit_home="${ZINIT_HOME:-$XDG_DATA_HOME/zinit}"
+
+# Install Zinit automatically if it's not already present.
+if [[ ! -f "$zinit_home/zinit.zsh" ]]; then
+  echo "🔧 Installing Zinit plugin manager..."
+  command git clone https://github.com/zdharma-continuum/zinit.git "$zinit_home" \
+    && echo "✅ Zinit installed." || echo "❌ Failed to install Zinit."
+fi
+
+# Source Zinit to make it available.
+source "$zinit_home/zinit.zsh"
+
+# --- Plugin Loading ---
+# Load all plugins in a single, declarative block.
+# `lucid` reduces output, `depth=1` does a shallow clone for speed.
+# Use `zinit ice` to apply "ices" (options) to the next `zinit light` command.
+
+# 1. Theme (Highest Priority)
+
+zinit ice depth=1 lucid
+zinit light romkatv/powerlevel10k
+
+# 2. Core Functionality (Load immediately but asynchronously)
+
+zinit ice lucid # No 'wait' for syntax highlighting, as it must load before the prompt is drawn.
+zinit light zdharma-continuum/fast-syntax-highlighting
+zinit ice lucid
+zinit light zsh-users/zsh-autosuggestions
+# Defer loading of completions to speed up startup and fix P10k instant prompt.
+zinit ice blockf atpull'zinit creinstall -q .' lucid wait'1' atload"zicompinit; zicdreplay"
+zinit light zsh-users/zsh-completions
+zinit ice lucid
+zinit light junegunn/fzf # Loads fzf and its keybindings (Ctrl-T, Ctrl-R, Alt-C)
+
+# 3. Enhanced Interactivity & Navigation (for tools installed via Nix)
+# This method is more robust than downloading OMZ snippets. It directly
+# initializes the tools once they are available in the PATH.
+zinit ice lucid if'(( ${+commands[atuin]} ))' atload'eval "$(atuin init zsh --disable-up-arrow)"' id-as"atuin"
+zinit snippet /dev/null
+zinit ice lucid if'(( ${+commands[zoxide]} ))' atload'eval "$(zoxide init zsh)"' id-as"zoxide"
+zinit snippet /dev/null
+
+# --- FZF (Fuzzy Finder) Enhancements ---
+# This configuration is applied on top of the defaults loaded by the plugin.
+# It requires `fd` and `bat` to be installed for the best experience.
+if command -v fd >/dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+fi
+if command -v bat >/dev/null; then
+  export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --preview 'bat --style=numbers --color=always --line-range :500 {}'"
+else
+  export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"
+fi
+
+# --- Direnv Integration ---
+# Load direnv hook if the command exists. This allows for per-directory environments.
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
+
+# ==============================================================================
+# ==============================================================================
+# 50 | AGENTIC SELF-HEALING & AI
+# ==============================================================================
+# The intelligent core of the shell. It manages local AI servers, provides a
+# unified interface for different models, and assists with command failures.
+
+# ----------  NEW LLM STACK  ----------
+ollama_blob() {
+  jq -r '.layers[]|select(.mediaType=="application/vnd.ollama.image.model").digest' \
+      ~/.ollama/models/manifests/registry.ollama.ai/library/"$1"/latest \
+    | sed 's/:/-/' | xargs -I{} echo ~/.ollama/models/blobs/{}
+}
+
+start_llama_daemon() {
+  local role="$1" port="$2" model="$3" extra=("${@:4}")
+  local log="$XDG_CACHE_HOME/zsh/${role}.log"
+  mkdir -p "$(dirname "$log")"
+
+  if ! command -v llama-server &>/dev/null; then
+    echo "⚠️  llama-server not found. Cannot start '$role' daemon. Run dependency check or install 'nixpkgs#llama-cpp'."
+    return 1
+  fi
+
+  pgrep -f "llama-server.*--port $port" >/dev/null && return
+
+  until [[ -f "$(ollama_blob "$model")" ]]; do
+    echo "📦 Pulling $model via Ollama …"
+    ollama pull "$model"
+  done
+
+  local file=$(ollama_blob "$model")
+  echo "🚀 Starting $role on :$port"
+  # Temporarily disable job control to immediately disown the process.
+  # This prevents the noisy "terminated" message from appearing if the daemon fails later.
+  setopt NO_MONITOR
+  nohup llama-server -m "$file" -c 4096 -t 4 --host 0.0.0.0 --port "$port" \
+    "${extra[@]}" > "$log" 2>&1 &
+  local pid=$!
+  setopt MONITOR
+
+  sleep 2 # Give it a moment to start or fail
+  if ! kill -0 $pid 2>/dev/null; then
+    echo "❌ Failed to start $role daemon. Check log for errors: $log"
+  fi
+}
+
+# Starts only the default chat daemon for fast, lightweight startup.
+start_llm_stack() {
+  start_llama_daemon chat 8081 phi3
+}
+
+# Starts the full suite of daemons (chat, vision, embeddings).
+start_llm_stack_full() {
+  start_llama_daemon chat   8081 phi3
+  start_llama_daemon vision 8082 moondream --image
+  start_llama_daemon embed  8083 nomic-embed-text --embedding --pooling cls
+}
+
+# auto-start on every shell (lightweight, exits early if already running)
+# NOTE: The following line can conflict with the launchd agent. The agent is designed
+# to keep the stack running globally. This synchronous call blocks shell startup,
+# causing the Powerlevel10k error and a very slow start time.
+#
+# The recommended approach on macOS is to use the persistent background agent.
+# You can install it by running: install_llama_agent
+#
+# [[ -z $ZSH_STARTUP_ONCE ]] && { ZSH_STARTUP_ONCE=1; start_llm_stack; }
+
+# --------------------------------------------------
+# Private LLM back-end helpers
+# --------------------------------------------------
+
+# The multi-daemon stack (start_llm_stack) is started automatically on shell launch.
+# It provides separate endpoints for chat, vision, and embeddings.
+# The aliases `phi3`, `moondream`, and `embed` are configured to use these endpoints.
+
+# ----------  macOS LaunchAgent ----------
+install_llama_agent() {
+  local plist=~/Library/LaunchAgents/home.llama.stack.plist
+  [[ -f $plist ]] && { echo "✅ Agent already installed"; return; }
+
+  mkdir -p ~/Library/LaunchAgents
+  cat > "$plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>         <string>home.llama.stack</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <string>source ${ZDOTDIR:-$HOME/.config/zsh}/.zshrc && start_llm_stack</string>
+  </array>
+  <key>RunAtLoad</key>     <true/>
+  <key>KeepAlive</key>     <true/>
+  <key>StandardOutPath</key><string>/tmp/llama.log</string>
+  <key>StandardErrorPath</key><string>/tmp/llama.log</string>
+</dict>
+</plist>
+EOF
+  launchctl load "$plist"
+  echo "NOTE: The LaunchAgent sources your zshrc. If you move or rename it,"
+  echo "you may need to update and reload the plist at: $plist"
+}
+
+# ----------  aliases ----------
+alias phi3='curl -s http://localhost:8081/v1/chat/completions \
+  -d "{\"messages\":[{\"role\":\"user\",\"content\":\"$*\"}]}" \
+  | jq -r .choices[0].message.content'
+
+alias moondream='curl -s http://localhost:8082/v1/chat/completions \
+  -F file=@- -F prompt="$*"'
+
+alias embed='curl -s http://localhost:8083/v1/embeddings \
+  -d "{\"input\":\"$*\"}" | jq -r .data[0].embedding[0:3]'
+
+# ----------  first run ----------
+# --- Safe API Key Loading (for external services like Gemini) ---
+if [[ -z "$GEMINI_API_KEY" && -f "$HOME/.env" ]]; then
+  export GEMINI_API_KEY="$(grep GEMINI_API_KEY $HOME/.env | cut -d'=' -f2- | tr -d '\"')"
+fi
+
+# --- Agentic Executor: `doas` (Do As AI Says) ---
+# DANGEROUS: This function asks the AI to generate a shell command based on a
+# natural language prompt and then gives you the option to execute it.
+# This is the bridge from AI-as-chatbot to AI-as-collaborator.
+#
+# !! SECURITY WARNING !!
+# Never execute a command unless you fully understand what it does. This function
+# includes a confirmation step to prevent accidental execution.
+#
+# Usage:
+#   doas "find all markdown files in my home dir and zip them up"
+#   doas "kill the process that is using port 3000"
+#
+doas() {
+  if [[ -z "$*" ]]; then
+    echo "Usage: doas \"your natural language command\"" >&2; return 1
+  fi
+  local prompt="$*"
+
+  # Craft a precise prompt for the AI to ensure it only returns a command.
+  local full_prompt="You are a shell command expert. Based on the following request, generate a SINGLE, executable Zsh shell command and nothing else. Do not add any explanation, preamble, or markdown formatting. Just the raw command. Request: '$prompt'"
+
+  # Get the command from the AI using our unified `llm` interface.
+  # We prefer a powerful model like Gemini for this, but will fall back.
+  local suggested_command
+  local temp_file=$(mktemp)
+  # Ensure temp file is removed when the function returns
+  trap "rm -f $temp_file" RETURN
+
+  echo "🤖 ${BOLD}AI suggests running:${RESET}"
+  printf "   \`${CYAN}"
+
+  # Stream the output to the terminal while also capturing it to a temp file.
+  if command -v gemini-cli >/dev/null; then
+    llm -m gemini "$full_prompt" | tee "$temp_file"
+  else
+    llm "$full_prompt" | tee "$temp_file"
+  fi
+
+  # Close the command string and add a newline
+  printf "${RESET}\`\n"
+
+  # Read the complete, captured command from the temp file.
+  suggested_command=$(<"$temp_file")
+
+  if [[ -z "$suggested_command" ]]; then
+    echo "❌ AI did not return a command. Please try rephrasing your request."
+    return 1
+  fi
+
+  # The critical human-in-the-loop confirmation step.
+  read -k1 "REPLY?Execute this command? [y/N] "; echo
+  if [[ "${REPLY}" =~ ^[Yy]$ ]]; then
+    echo "🚀 Executing..."
+    # Use `eval` to execute the string as a command.
+    eval "$suggested_command"
+  else
+    echo "Execution aborted by user."
+  fi
+}
+
+# --- AI Command Chaining: `chain-ai` ---
+# Give the AI a multi-step goal and approve its plan.
+# Usage: chain-ai "clone the lsd repo, build it, and install it"
+chain-ai() {
+  local goal="$*"
+  local prompt="You are a shell automation expert. Based on the following goal, create a numbered list of shell commands to achieve it. Each command should be on a new line. Goal: '$goal'"
+
+  echo "🤖 Generating a plan for: $goal..."
+  local plan
+  local temp_file=$(mktemp)
+  trap "rm -f $temp_file" RETURN
+
+  # Stream the plan to the user while capturing it.
+  echo "📝 AI has proposed the following plan:"
+  printf "${CYAN}"
+  llm -m gemini "$prompt" | tee "$temp_file"
+  printf "${RESET}"
+
+  plan=$(<"$temp_file")
+
+  if [[ -z "$plan" ]]; then echo "❌ AI failed to generate a plan."; return 1; fi
+
+  read -k1 "REPLY?Begin executing this plan step-by-step? [y/N] "; echo
+  if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then echo "Plan aborted."; return 0; fi
+
+  # Execute each line of the plan with confirmation.
+  local step_num=1
+  while IFS= read -r cmd; do
+    # Skip empty lines or non-command lines
+    [[ -z "$cmd" || ! "$cmd" =~ ^[0-9]+\. ]] && continue
+
+    local clean_cmd=$(echo "$cmd" | sed 's/^[0-9]\+\. //')
+    echo "\n--- Step ${step_num}: \`${clean_cmd}\` ---"
+    read -k1 "REPLY?Execute? (y/N/s)kip/(a)bort all "; echo
+    case "$REPLY" in
+      [Yy]) eval "$clean_cmd" ;;
+      [Ss]) echo "Skipping step." ;;
+      [Aa]) echo "Aborting plan."; return 1 ;;
+      *) echo "Skipping step.";;
+    esac
+    step_num=$((step_num + 1))
+  done <<< "$plan"
+
+  echo "✅ Plan finished."
+}
+
+llm() {
+  local model_arg=""
+  # Simple argument parsing: check for a model flag like -m <model>
+  if [[ "$1" == "-m" && -n "$2" ]]; then
+    model_arg="$2"
+    shift 2 # Consume the flag and model name
+  fi
+  local prompt="${1:-$(cat -)}" # Read from argument or stdin
+
+  # --- Routing Logic ---
+  case "$model_arg" in
+    "gemini")
+      # Route to Gemini for powerful, general-purpose tasks
+      echo "🧠 Querying Gemini..." >&2
+      _llm_gemini "$prompt"
+      ;;
+    "local"|*)
+      # Default to local models. Prioritize high-performance llama.cpp if running.
+      if pgrep -f "llama.cpp/server" >/dev/null; then
+        echo "🧠 Querying Llama.cpp server..." >&2
+        _llm_llamacpp "$prompt"
+      elif pgrep -x "ollama" >/dev/null; then
+        echo "🧠 Querying Ollama (${model_arg:-phi3:latest}3)..." >&2
+        _llm_ollama "$prompt" "$model_arg"
+      else
+        echo "💡 No local LLM server is running. Starting Ollama..."
+        _llm_ollama "$prompt" "$model_arg" # _llm_ollama will auto-start the server
+      fi
+      ;;
+  esac
+}
+
+# --- Backend Helper Functions (prefixed with _) ---
+
+# Helper for Ollama
+_llm_ollama() {
+  local prompt="$1"
+  local model="${2:-llama3}" # Default to llama3 if no specific model is passed
+  pgrep -x "ollama" >/dev/null || start_ollama
+  # Use --no-buffer to get immediate output for streaming
+  curl -s --no-buffer http://127.0.0.1:11434/api/generate \
+    -d "{\"model\":\"$model\",\"prompt\":${(qq)prompt},\"stream\":true}" |
+    while IFS= read -r line; do
+      # Extract the content and print it without a newline to stream tokens
+      echo "$line" | jq -r '.response // empty' | tr -d '\n'
+    done
+}
+
+# Helper for Llama.cpp server
+_llm_llamacpp() {
+  local prompt="$1"
+  # The llama.cpp server uses a different API format (OpenAI compatible)
+  curl -s --no-buffer http://127.0.0.1:8080/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d "{\"messages\":[{\"role\":\"user\",\"content\":${(qq)prompt}}],\"model\":\"local-model\",\"stream\":true}" |
+    grep '^data:' |
+    sed 's/^data: //' |
+    while IFS= read -r line; do
+      # The stream can end with [DONE]
+      if [[ "$line" != "[DONE]" ]]; then
+        echo "$line" | jq -r '.choices[0].delta.content // empty' | tr -d '\n'
+      fi
+    done
+}
+
+# Helper for Gemini
+_llm_gemini() {
+  local prompt="$1"
+  if ! command -v gemini-cli >/dev/null; then
+    echo "❌ 'gemini-cli' not found. Ensure it's installed via Nix dependency check." >&2; return 1
+  fi
+  # Use the --stream flag for real-time output
+  gemini-cli --stream "$prompt"
+}
+
+# --- Server Management ---
+start_ollama() {
+  if ! pgrep -x "ollama" >/dev/null; then
+    echo "🚀 Starting Ollama service..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      # On macOS, it's best to open the app and wait for it to be ready.
+      if open -g "Ollama"; then
+        # Wait up to 10 seconds for the service to become available.
+        for i in {1..10}; do curl -s http://127.0.0.1:11434/ >/dev/null && break; sleep 1; done
+      fi
+    else
+      # On Linux, run the service in the background.
+      (nohup ollama serve >/dev/null 2>&1 &) && sleep 2
+    fi
+
+    if pgrep -x "ollama" >/dev/null; then echo "✅ Ollama service started."; else echo "❌ Failed to start Ollama. Please start it manually."; fi
+  else
+    echo "✅ Ollama service is already running."
+  fi
+}
+
+# To start llama.cpp, you must have it compiled.
+# Usage: start_llamacpp "/path/to/your/model.gguf"
+start_llamacpp() {
+  local model_path="$1"
+
+  if ! command -v llama-server >/dev/null; then
+    echo "❌ 'llama-server' not found. Ensure 'nixpkgs#llama-cpp' is installed in your profile." >&2
+    return 1
+  fi
+  if [[ ! -f "$model_path" ]]; then
+    echo "❌ Model file not found at '$model_path'." >&2; return 1
+  fi
+  if pgrep -f "llama.cpp/server" >/dev/null; then
+    echo "✅ Llama.cpp server is already running."
+  else
+    echo "🚀 Starting Llama.cpp server with model: $(basename $model_path)..."
+    (nohup llama-server -m "$model_path" --host 0.0.0.0 --port 8080 >/dev/null 2>&1 &) && sleep 3
+    pgrep -f "llama.cpp/server" >/dev/null && echo "✅ Llama.cpp server started." || echo "❌ Failed to start Llama.cpp server."
+  fi
+}
+
+# --- Command Failure Agent ---
+typeset -g ZSH_FAILURE_COUNT=0
+_command_failure_agent() {
+  if (( $? != 0 )); then ZSH_FAILURE_COUNT=$((ZSH_FAILURE_COUNT + 1)); else ZSH_FAILURE_COUNT=0; fi
+  if (( ZSH_FAILURE_COUNT >= 2 )); then # Trigger after 2 failures
+    local last_cmd="${history[$HISTCMD]}"
+    echo "\n💡 Command failed: \`${last_cmd}\`"
+    read -k1 "REPLY?🤖 Ask AI for help? [y/N] "; echo
+    if [[ "${REPLY}" =~ ^[Yy]$ ]]; then
+      # Use the unified `llm` command to get help
+      llm "Explain the error in the zsh command \`$last_cmd\` and suggest a fix."
+    fi
+    ZSH_FAILURE_COUNT=0 # Reset after offering help
+  fi
+}
+autoload -U add-zsh-hook
+add-zsh-hook precmd _command_failure_agent
+
+# ==============================================================================
+# 70 | DIAGNOSTICS & HEALTH DASHBOARD
+# ==============================================================================
+# Provides a comprehensive, on-demand report on system health.
+
+# --- Essential Tools Definition ---
+# This associative array maps tool names to their descriptions.
+# It's used by the self-healing agent and the health dashboard.
+typeset -A ESSENTIAL_TOOLS=(
+  [git]="Git Version Control"
+  [nix]="Nix Package Manager"
+  [nvim]="Neovim Editor"
+  [fzf]="Fuzzy Finder"
+  [bat]="Cat Clone with Syntax Highlighting"
+  [lsd]="LS Deluxe (ls replacement)"
+  [fd]="Find replacement"
+  [jq]="JSON Processor"
+)
+
+# --- Health Check Sub-Routines ---
+_check_network() { ping -c 1 -W 1 8.8.8.8 &>/dev/null && echo "🌍 Network: Connected" || echo "🌍 Network: Disconnected"; }
+_check_disk_space() {
+  echo "💾 Disk Space:"
+  df -h / "$HOME" /nix/store 2>/dev/null | awk 'NR>1 {printf "   - %-15s %s\n", $6, $5}'
+}
+_check_system_resources() {
+  echo "💻 System Resources:"
+  case "$OSTYPE" in
+    darwin*) echo "   - Memory: $(vm_stat | awk '/Pages free/ {free=$3} /Pages active/ {active=$3} /Pages inactive/ {inactive=$3} /Pages wired/ {wired=$3} END { printf "%.0f%% Used", (active+inactive+wired)*100/(free+active+inactive+wired) }')" ;;
+    linux*) echo "   - Memory: $(free -m | awk 'NR==2{printf "%.0f%% Used", $3*100/$2 }')" ;;
+  esac
+  echo "   - Top 3 CPU Processes:"
+  ps -eo %cpu,comm --sort=-%cpu | head -n 4 | tail -n 3 | sed 's/^/     /'
+}
+_check_essential_tools() {
+  echo "🛠️  Essential Tools Status:"
+  for tool desc in "${(@kv)ESSENTIAL_TOOLS}"; do
+    command -v "$tool" &>/dev/null && echo "   [✅] $tool" || echo "   [❌] $tool"
+  done
+}
+
+# --- Main Health Dashboard Function (with Caching) ---
+healthcheck() {
+  local cache_file="$XDG_CACHE_HOME/zsh/healthcheck.cache"
+  local cache_ttl=300 # 5 minutes in seconds
+
+  # Check if a valid cache exists. `(#qN.m-5)` checks for a file modified in the last 5 minutes.
+  if [[ -f "$cache_file" && -n "$cache_file"(#qN.m-5) ]]; then
+    echo "✅ Displaying cached report (run 'healthcheck --force' to refresh)."
+    cat "$cache_file"
+    return
+  fi
+
+  # If no cache, generate the report and save it.
+  # The `tee` command both prints to the terminal and saves to the cache file.
+  {
+    echo "\n--== System Health & Diagnostics (Live Report) ==--"
+    _check_network
+    _check_disk_space
+    _check_system_resources
+    _check_essential_tools
+    echo "\n--== End of Report ==--"
+  } | tee "$cache_file"
+}
+
+# Allow forcing a refresh by ignoring the cache.
+if [[ "$1" == "--force" ]]; then
+  rm -f "$XDG_CACHE_HOME/zsh/healthcheck.cache"
+fi
+# ==============================================================================
+# 80 | DYNAMIC INTERFACE & HEADS-UP DISPLAY (HUD)
+# ==============================================================================
+# This section moves beyond a static prompt, creating a dynamic, context-aware
+# interface and an on-demand "Heads-Up Display" for critical system info.
+
+# --- Powerlevel10k Theme ---
+# P10k is the primary, high-performance interface.
+if (( $+functions[p10k] )); then
+  [[ -f "$ZDOTDIR/.p10k.zsh" ]] && source "$ZDOTDIR/.p10k.zsh"
+else
+  # --- Dynamic Fallback Prompt (if P10k is missing) ---
+  echo "⚠️ Powerlevel10k not found. Using dynamic fallback prompt."
+  autoload -U colors && colors; autoload -Uz vcs_info
+  zstyle ':vcs_info:*' enable git; zstyle ':vcs_info:git:*' formats 'on  %b'
+  precmd() { vcs_info }
+  PROMPT="╭─%F{blue}%n@%m%f in %F{green}%~%f \${vcs_info_msg_0_}
+╰─%F{red}%#%f "
+fi
+
+# --- HUD Helper: AI Service Health Check (stub) ---
+# The `hud` command calls this function.
+llm-health() {
+  _check_daemon_status() {
+    local role=$1 port=$2 model=$3
+    local log_file="$XDG_CACHE_HOME/zsh/${role}.log"
+    printf "  - %-7s (%-16s): " "$role" "$model"
+    if pgrep -f "llama-server.*--port $port" >/dev/null; then
+      echo "✅ Online"
+    else
+      local reason
+      # Grab the last non-empty line from the log to show the reason for failure.
+      reason=$(grep . "$log_file" 2>/dev/null | tail -n 1 | cut -c 1-80)
+      if [[ -n "$reason" ]]; then
+        echo "❌ Offline. Reason: $reason"
+      else
+        echo "❌ Offline. (No log found or empty)"
+      fi
+    fi
+  }
+  _check_daemon_status "chat"   8081 "phi3"
+  _check_daemon_status "vision" 8082 "moondream"
+  _check_daemon_status "embed"  8083 "nomic-embed-text"
+  printf "  - %-7s (%-16s): " "Ollama" "Service"
+  pgrep -x "ollama" >/dev/null && echo "✅ Online" || echo "❌ Offline"
+}
+
+# --- Heads-Up Display (HUD) Command: `hud` ---
+# An innovative, on-demand overlay showing critical system and project status.
+# It's like a system dashboard you can summon and dismiss instantly.
+# Bound to Alt+H for quick access.
+hud() {
+  # Save cursor position and clear the screen
+  tput smcup; tput civis; clear
+
+  # Create temporary files for columns securely
+  local col1_file=$(mktemp)
+  local col2_file=$(mktemp)
+  local col3_file=$(mktemp)
+  # Ensure temp files are cleaned up on exit/interrupt
+  trap "rm -f $col1_file $col2_file $col3_file; tput cnorm; tput rmcup" EXIT INT TERM
+
+  # --- Render HUD ---
+  # Column 1: System & Network
+  {
+    echo "--- 💻 System ---"
+    _check_network
+    _check_disk_space | sed 's/^/  /'
+    echo "\n--- 🧠 Top Processes ---"
+    ps -eo %mem,%cpu,comm --sort=-%mem | head -n 6 | tail -n 5 | sed 's/^/  /'
+  } | column -t | sed 's/^/  /' > "$col1_file"
+
+  # Column 2: Git & Project
+  {
+    echo "--- 🌳 Git Project ---"
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+      echo "\n--- Recent Commits ---"
+      git log --oneline -n 5 | sed 's/^/  /'
+      echo "\n--- Status ---"
+      git status -sb | sed 's/^/  /'
+    else
+      echo "Not a git repository."
+    fi
+  } > "$col2_file"
+
+  # Column 3: AI Services
+  {
+    echo "--- 🤖 AI Services ---"
+    llm-health
+  } > "$col3_file"
+
+  # Combine columns side-by-side
+  paste "$col1_file" "$col2_file" "$col3_file" | column -s $'\t' -t
+
+  # --- Wait for keypress to dismiss ---
+  echo "\n\n${(r:$(tput cols):─)}"
+  echo "✅ HUD Active. Press any key to dismiss."
+  read -k 1
+
+  # Restore screen and cursor
+  tput cnorm; tput rmcup
+  trap - EXIT INT TERM # Clear the trap
+}
+zle -N hud
+bindkey '^[h]' hud # Binds Alt+H to summon the HUD
+
+# ==============================================================================
+# 90 | FINALIZATION, PROFILING & INTROSPECTION
+# ==============================================================================
+# This final section not only sources overrides but also profiles the shell's
+# own startup performance and provides powerful tools for introspection.
+
+# --- User-Specific Overrides ---
+# Sourced last to allow overriding any setting in this file.
+[[ -f "$ZDOTDIR/.zshrc.local" ]] && source "$ZDOTDIR/.zshrc.local"
+[[ -f "$ZDOTDIR/.zshrc.work" ]] && source "$ZDOTDIR/.zshrc.work"
+[[ -f "$ZDOTDIR/.zshrc.$(hostname)" ]] && source "$ZDOTDIR/.zshrc.$(hostname)"
+
+# --- Shell Performance Profiler ---
+# This function analyzes the Zsh startup time and identifies slow components.
+# It requires `zsh/zprof` which is a built-in profiler.
+zprof_report() {
+  zmodload zsh/zprof
+  echo "\n--- Zsh Startup Profile ---"
+  zprof | head -n 15
+  echo "--------------------------"
+}
+
+# --- Shell Introspection & Session Metrics: `shell-stats` ---
+# Provides a detailed report on the current shell's state and your usage patterns.
+shell-stats() {
+  echo "\n--- Shell State Report ---"
+  echo "Zsh Version: $ZSH_VERSION"
+  echo "ZDOTDIR: $ZDOTDIR"
+  echo "Startup Time: ${ZSH_STARTUP_MS:-N/A}ms"
+  echo "\n--- Loaded Plugins (via Zinit) ---"
+  zinit list --loaded | awk '{print "  - " $1}' | column
+  echo "\n--- Session Command Metrics ---"
+  fc -l 1 | awk '{CMD[$2]++;count++;}END{ for (a in CMD)print CMD[a] " " CMD[a]/count*100 "% " a;}' | sort -rn | head -n 10 | sed 's/^/  /'
+  echo "\n--- AI Services ---"
+  llm-health 2>/dev/null
+  echo "------------------------"
+}
+
+# --- Dynamic Welcome Message ------------------------------------------
+if [[ -n "$ZSH_STARTUP_TIME_MS" ]]; then
+  integer end_time_ms=$((EPOCHSECONDS * 1000 + EPOCHREALTIME_NSEC / 1000000))
+  export ZSH_STARTUP_MS=$((end_time_ms - ZSH_STARTUP_TIME_MS))
+  
+  if (( ZSH_STARTUP_MS > 500 )); then
+    echo "🐢 Shell ready in ${ZSH_STARTUP_MS}ms. Run 'zprof_report' to profile."
+  else
+    echo "🚀 Shell ready in ${ZSH_STARTUP_MS}ms."
+  fi
+  # The self-healing check was moved to the end of the file to avoid conflicts with the llm function
+  # Optional: fire-and-forget "quote of the day"
+  ( sleep 1; llm "Give me a short, witty, one-sentence quote for a programmer's terminal." 2>/dev/null | fold -s -w "$(tput cols)" | sed 's/^/💡 /' ) &|
+fi
+unset ZSH_STARTUP_TIME_MS
+# ---------------------------------------------------------------------- failsafe PATH, sources Nix, and establishes
+# the XDG directory standard for a clean, portable, and self-contained setup.
+
+# ~/.zshrc
+if [[ -z "$ZSH_VERSION" ]]; then
+  echo "This file must be sourced from zsh, not $0." >&2
+  return 1
+fi
+    
+# --- Failsafe PATH & Nix Bootstrap ---
+# Ensure critical system binaries are available before anything else.
+# This prevents a broken shell if user configurations are faulty.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+# Source Nix environment if it exists. The `.` command is used for POSIX
+# compatibility, and errors are suppressed to prevent noise if Nix isn't installed.
+if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
+  . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' 2>/dev/null
+fi
+if [ -e "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh" 2>/dev/null
+fi
+
+# --- XDG Base Directory Standard & ZDOTDIR ---
+# Adhere to the XDG standard to keep the home directory clean.
+# Fallback to ~/.config, ~/.cache, etc., if the variables are not already set.
+export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+export XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+# Tell Zsh to use its own dedicated XDG-compliant directory.
+# This moves .zsh_history and other Zsh files out of $HOME.
+export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+
+# Ensure all necessary XDG directories exist on startup.
+for dir in "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_DATA_HOME" "$XDG_STATE_HOME" "$ZDOTDIR"; do
+  mkdir -p "$dir"
+done
+
+# --- Language Ecosystem Homes (XDG Compliant) ---
+# Configure common development tools to respect the XDG standard.
+export GOPATH="$XDG_DATA_HOME/go"
+export GOBIN="$GOPATH/bin"
+export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
+export CARGO_HOME="$XDG_DATA_HOME/cargo"
+export NVM_DIR="$XDG_DATA_HOME/nvm"
+export BUN_INSTALL="$XDG_CACHE_HOME/bun" # Bun's cache
+export DENO_DIR="$XDG_DATA_HOME/deno"    # Deno's home
+export PYTHONUSERBASE="$XDG_DATA_HOME/python"
+
+# --- Unified, De-duplicated PATH Construction ---
+# Use `typeset -U path` to automatically handle uniqueness and ordering.
+# Paths are added in order of priority (highest first).
+typeset -U path
+path=(
+  # User-specific binaries
+  "$HOME/.local/bin"
+  "$HOME/scripts"
+  # Language binaries
+  "$GOBIN"
+  "$CARGO_HOME/bin"
+  "$BUN_INSTALL/bin"
+  "$DENO_DIR/bin"
+  "$PYTHONUSERBASE/bin"
+  # Nix binaries (highest priority system-wide)
+  "$HOME/.nix-profile/bin"
+  "/nix/var/nix/profiles/default/bin"
+  "/run/current-system/sw/bin"
+  # System binaries (as a fallback)
+  "/usr/local/bin"
+  "/usr/bin"
+  "/bin"
+  "/usr/local/sbin"
+  "/usr/sbin"
+  "/sbin"
+)
+export PATH
+
+# ----------  Asynchronous Auto-Dependency Installation ----------
+# This runs in the background to avoid blocking the shell startup.
+_async_dep_check() {
+  # This function should only run once per login session.
+  [[ -n "$ZSH_DEPS_CHECKED" ]] && return
+  export ZSH_DEPS_CHECKED=1
+
+  printf '\n--- Dependency Check (running in background) ---\n'
+  missing=()
+  nix_packages_to_install=()
+  command -v llama-server &>/dev/null || { missing+=("llama-server"); nix_packages_to_install+=("nixpkgs#llama-cpp"); } # AI
+  command -v jq &>/dev/null || { missing+=("jq"); nix_packages_to_install+=("nixpkgs#jq"); } # AI
+  command -v zoxide &>/dev/null || { missing+=("zoxide"); nix_packages_to_install+=("nixpkgs#zoxide"); } # Navigation
+  command -v atuin &>/dev/null || { missing+=("atuin"); nix_packages_to_install+=("nixpkgs#atuin"); } # History
+  command -v fkill &>/dev/null || { missing+=("fkill"); nix_packages_to_install+=("nixpkgs#nodePackages.fkill-cli"); } # Process Mgmt
+  command -v ollama &>/dev/null || { missing+=("ollama") } # AI
+  command -v gemini-cli &>/dev/null || { missing+=("gemini-cli"); nix_packages_to_install+=("nixpkgs#gemini-cli"); } # AI
+
+  if (( ${#missing[@]} == 0 )); then
+    echo "✅ All tools present."
+  else
+    echo "❌ Missing: ${missing[*]}. Attempting to install..."
+    if command -v nix &>/dev/null; then
+      if (( ${#nix_packages_to_install[@]} > 0 )); then
+        nix profile add "${nix_packages_to_install[@]}" && \
+        echo "✅ Nix packages installed. Please run 'zshreload' to activate new commands."
+      fi
+      if [[ " ${missing[*]} " =~ " ollama " ]]; then
+          echo "   -> Please install Ollama.app from https://ollama.com"
+          open https://ollama.com
+      fi
+    else
+      echo "⚠️  Nix not found. Cannot auto-install. Please install missing tools manually."
+    fi
+  fi
+  echo "--- Dependency Check Complete ---"
+}
+# Run the check in the background and disown it.
+_async_dep_check &|
+
+# ---------- Self-healing startup-time fix ----------
+autoload -U add-zsh-hook
+
+# _fix_startup_math() {
+#  local bad_line='export ZSH_STARTUP_MS=$(((end_time - ZSH_STARTUP_TIME) / 1000000))'
+#  local good_line='export ZSH_STARTUP_MS=$(( (${end_time:-0} - ${ZSH_STARTUP_TIME:-0}) / 1000000 ))'
+#  local line_no
+#  line_no=$(grep -nF "$bad_line" ~/.zshrc.real | cut -d: -f1)
+
+#  [[ -z $line_no ]] && return 0   # already fixed
+
+ # echo
+ # echo "💡  Found bad math on line $line_no:"
+ # echo "   ${bad_line}"
+ # echo "   ↓ proposed ↓"
+ # echo "   ${good_line}"
+ # read -k1 "REPLY?Apply fix? [y/N] "
+ # echo
+
+ # if [[ $REPLY == y ]]; then
+ #  # create backup
+ #   cp ~/.zshrc.real ~/.zshrc.real.bak.$(date +%s)
+ #  # in-place replacement
+ #   sed -i '' "${line_no}s/.*/${good_line//\//\\/}/" ~/.zshrc.real
+ #  echo "✅  Applied & saved. Restart shell to reload."
+#  fi
+#}
+
+#add-zsh-hook precmd _fix_startup_math
+# --- Core Environment Variables ---
+export EDITOR="${EDITOR:-nvim}"
+export VISUAL="$EDITOR"
+export PAGER="${PAGER:-less}"
+export LESS="-R" # Allow color codes in `less`
+export LC_ALL="en_US.UTF-8"
+export LANG="en_US.UTF-8"
+
+# --- Shell Guardian ---
+# This function runs before each prompt to offer proactive help.
+_shell_guardian() {
+  # Guardian 1: Stale Nix Environment
+  # If the user is in a nix-shell and the flake.lock is newer than the shell's start time,
+  # it means dependencies have changed and the environment is stale.
+  if [[ -n "$IN_NIX_SHELL" && -f "flake.lock" && "flake.lock" -nt "$NIX_SHELL_START_TIME_FILE" ]]; then
+    echo "🛡️ ${YELLOW}Guardian: Your Nix dependencies have changed. It's recommended to run 'direnv reload' or restart the shell.${RESET}"
+    # In a more advanced version, you could offer to run it automatically.
+  fi
+
+  # Guardian 2: Missing API Keys for a tool
+  # If the user tries to run a command that needs an API key which isn't set.
+  local last_cmd_name="${history[$HISTCMD]%% *}"
+  if [[ "$last_cmd_name" == "terraform" || "$last_cmd_name" == "pulumi" ]]; then
+    if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+      echo "🛡️ ${YELLOW}Guardian: You're using a cloud tool but no AWS credentials are set. Did you forget to run 'aws sso login'?${RESET}"
+    fi
+  fi
+}
+# Add the guardian to the precmd hook.
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _shell_guardian
+
+# To enable the Nix check, you need to touch a file when direnv loads the shell.
+# Add this to your ~/.config/direnv/direnvrc:
+#
+#   export NIX_SHELL_START_TIME_FILE="$XDG_STATE_HOME/direnv/nix_start_time"
+#   touch "$NIX_SHELL_START_TIME_FILE"
+#
+
+
+# ==============================================================================
+# 20 | PRESCIENT HISTORY & COMPLETIONS
+# ==============================================================================
+# Configures a massive, intelligent history and a lightning-fast, descriptive
+# autocompletion system. This section is self-contained and optimized.
+
+# --- History Configuration (XDG-aware) ---
+export HISTFILE="$ZDOTDIR/.zsh_history" # Stored in ~/.config/zsh/
+export HISTSIZE=1000000
+export SAVEHIST=1000000
+setopt APPEND_HISTORY EXTENDED_HISTORY HIST_EXPIRE_DUPS_FIRST HIST_IGNORE_ALL_DUPS HIST_IGNORE_SPACE HIST_FIND_NO_DUPS HIST_REDUCE_BLANKS INC_APPEND_HISTORY SHARE_HISTORY
+
+# --- Completion System & Shell Options ---
+setopt AUTO_MENU AUTO_PARAM_SLASH COMPLETE_IN_WORD EXTENDED_GLOB NO_BEEP PUSHD_IGNORE_DUPS CORRECT NOTIFY
+autoload -Uz add-zsh-hook
+
+# Initialize the completion system, caching for speed.
+# The cache is rebuilt only if it's older than a week or doesn't exist.
+autoload -Uz compinit
+local comp_cache_file="$XDG_CACHE_HOME/zsh/zcompdump"
+if [[ -n "$comp_cache_file"(#qN.mh+168) ]]; then
+  compinit -i -C -d "$comp_cache_file"
+else
+  compinit -i -d "$comp_cache_file"
+fi
+zmodload -i zsh/complist
+
+# --- Completion Styling ---
+# Make completions look good and provide useful feedback.
+zstyle ':completion:*' menu select
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' use-cache yes
+zstyle ':completion:*' cache-path "$XDG_CACHE_HOME/zsh/zcompcache"
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}' # Case-insensitive matching
+zstyle ':completion:*' rehash true
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:messages' format ' %F{yellow}%d%f'
+zstyle ':completion:*:warnings' format ' %F{red}No matches for:%f %d'
+zstyle ':completion:*:*:*:*:corrections' format ' %F{green}%d (errors: %e)%f'
+zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+
+# ==============================================================================
+# 30 | ALIASES & HELPER FUNCTIONS
+# ==============================================================================
+# A comprehensive suite of shortcuts and utilities for navigation, file
+# operations, and system management.
+
+    # --- Ephemeral Shell Sandboxing ---
+# Creates a temporary, isolated environment.
+# Usage:
+#   sandbox go nodejs # Drops you in a shell with go and nodejs
+#   sandbox -p python3Packages.requests 'python script.py' # Runs a command inside
+sandbox() {
+  if ! command -v nix >/dev/null; then
+    echo "❌ Nix is required for sandboxing." >&2; return 1
+  fi
+
+  if [[ "$1" == "-p" ]]; then
+    shift
+    local packages=("$1")
+    shift
+    echo "📦 Running command in ephemeral shell with: ${packages[*]}..."
+    nix-shell -p "${packages[@]}" --run "$*"
+  else
+    local packages=("$@")
+    echo "📦 Entering ephemeral shell with: ${packages[*]}..."
+    echo "   Type 'exit' to destroy this environment."
+    nix-shell -p "${packages[@]}"
+  fi
+}
+
+# --- Navigation & Safety ---
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias -- -='cd -' # Go to previous directory
+alias cp='cp -iv'  # Interactive and verbose copy
+alias mv='mv -iv'  # Interactive and verbose move
+alias rm='rm -I'   # Prompt once before removing more than three files
+alias mkdir='mkdir -pv'
+
+# Create a directory and change into it.
+mkcd() {
+  mkdir -p "$1" && cd "$1"
+}
+
+# --- System & Zsh Management ---
+alias h='history'
+alias jbs='jobs -l' # List background jobs
+alias j='zi' # Interactive directory jump using zoxide+fzf
+alias path='echo $PATH | tr : "\n" | nl' # Numbered list of PATH entries
+alias zshconf='${EDITOR:-nvim} $ZDOTDIR/.zshrc'
+alias zshreload='source $ZDOTDIR/.zshrc && echo "✅ zshrc reloaded"'
+
+# --- Smart `ls` with Fallbacks ---
+# Use the best available `ls` replacement, falling back to the system default.
+if command -v lsd >/dev/null; then
+  alias ls='lsd --group-dirs=first --color=always'
+  alias ll='lsd -alF --group-dirs=first --color=always'
+  alias la='lsd -A --group-dirs=first --color=always'
+  alias lt='lsd --tree --depth=3'
+elif command -v exa >/dev/null; then
+  alias ls='exa --group-directories-first --color=always'
+  alias ll='exa -alF --group-directories-first --color=always'
+  alias la='exa -a --group-directories-first --color=always'
+  alias lt='exa --tree --level=3'
+else
+  # System `ls` with color support.
+  if [[ "$OSTYPE" == "darwin"* ]]; then # macOS
+    alias ls='ls -G'
+  else # Linux
+    alias ls='ls --color=auto'
+  fi
+  alias ll='ls -alF'
+  alias la='ls -A'
+fi
+
+# --- Universal Archive Extractor & Backup Utility ---
+# Extracts any archive type automatically.
+extract() {
+  if [[ ! -f "$1" ]]; then
+    echo "'$1' is not a valid file." >&2; return 1
+  fi
+  case "$1" in
+    *.tar.bz2) tar xjf "$1" ;; *.tar.gz) tar xzf "$1" ;;
+    *.bz2) bunzip2 "$1" ;;     *.rar) unrar x "$1" ;;
+    *.gz) gunzip "$1" ;;       *.tar) tar xf "$1" ;;
+    *.tbz2) tar xjf "$1" ;;    *.tgz) tar xzf "$1" ;;
+    *.zip) unzip "$1" ;;       *.Z) uncompress "$1";;
+    *.7z) 7z x "$1" ;;         *.xz) unxz "$1" ;;
+    *.lzma) unlzma "$1" ;;
+    *) echo "'$1' cannot be extracted via extract()" >&2; return 1 ;;
+  esac
+}
+
+# Creates a timestamped backup of a file or directory.
+backup() {
+  local target="$1"
+  if [[ ! -e "$target" ]]; then
+    echo "Error: '$target' does not exist." >&2; return 1
+  fi
+  local backup_name="${target}.backup.$(date +%Y%m%d-%H%M%S)"
+  cp -a "$target" "$backup_name" && echo "✅ Backup created: $backup_name"
+}
+
+# --- Git Workflow Enhancements ---
+alias g='git'
+alias ga='git add'
+alias gaa='git add --all'
+alias gc='git commit -m'
+alias gca='git commit -am'
+alias gs='git status -sb' # Concise status
+alias gp='git push'
+alias gpf='git push --force-with-lease' # Safer force push
+alias gl='git log --oneline --graph --decorate --all' # Pretty log
+alias gd='git diff'
+alias gdc='git diff --cached'
+alias gco='git checkout'
+alias gb='git branch'
+
+# Create a new branch and check it out.
+gnew() {
+  git checkout -b "$1"
+}
+
+# Get the current branch name.
+gbranch() {
+  git rev-parse --abbrev-ref HEAD
+}
+
+# --- Network & IP Information ---
+alias myip='curl -s ipinfo.io/ip'
+alias ports='netstat -tulanp'
+
+# --- Enhanced System & Process Management ---
+# Find a process by name with a clean, readable output.
+# Usage: `psfind ssh`
+psfind() {
+  ps aux | grep -i --color=auto "[${1[1]}]${1[2,-1]}"
+}
+
+# Get a quick overview of memory usage (works on macOS and Linux).
+meminfo() {
+  echo "🧠 ${BOLD}Memory Usage:${RESET}" # Assumes colors are defined later
+  case "$OSTYPE" in
+    darwin*)
+      vm_stat | perl -ne '/page size of (\d+)/ and $ps = $1; /Pages free:\s+(\d+)/ and $free = $1; /Pages active:\s+(\d+)/ and $active = $1; /Pages inactive:\s+(\d+)/ and $inactive = $1; /Pages wired down:\s+(\d+)/ and $wired = $1; END { $total = $ps*($free+$active+$inactive+$wired)/1073741824; $used = $ps*($active+$inactive+$wired)/1073741824; printf("Total: %.2f GB\nUsed:  %.2f GB (%.0f%%)\n", $total, $used, $used*100/$total); }'
+      ;;
+    linux*)
+      free -h
+      ;;
+    *)
+      echo "Unsupported OS for meminfo."
+      ;;
+  esac
+}
+
+# Get a quick weather report from the terminal.
+weather() {
+  local location="${1:-}" # Auto-detects location if empty
+  curl -s "wttr.in/${location}?m"
+}
+
+# --- Advanced Keybindings for FZF & Navigation ---
+# These require fzf and its shell extensions to be sourced by your plugin manager.
+# NOTE: These are placed here, but will only work after fzf is loaded.
+
+# [Ctrl-R] - Fuzzy search command history
+export FZF_CTRL_R_OPTS="--preview 'echo {}' --preview-window down:3:wrap --bind 'ctrl-y:execute-silent(echo -n {1..} | pbcopy)+abort'"
+
+# [Ctrl-T] - Fuzzy find files and directories to insert into the command line
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:100 {}'"
+
+# [Alt-C] - Fuzzy find a directory and `cd` into it
+export FZF_ALT_C_OPTS="--preview 'lsd --tree --depth=2 {}'"
+
+# --- Custom Interactive Keybindings ---
+# These functions and bindings add more interactive workflows.
+
+# Interactive process killer using fkill
+fkill-widget() {
+  BUFFER="fkill"
+  zle accept-line
+}
+zle -N fkill-widget
+bindkey '^[k]' fkill-widget # Binds Alt+K to interactive kill
+
+# ==============================================================================
+# 40 | PLUGIN & FZF ARCHITECTURE
+# ==============================================================================
+# Manages the Zsh plugin ecosystem via Zinit and configures the fuzzy finder
+# (FZF) for a modern, interactive experience.
+
+# --- Zinit Plugin Manager Setup ---
+# Set the Zinit home directory to be XDG-compliant.
+local zinit_home="${ZINIT_HOME:-$XDG_DATA_HOME/zinit}"
+
+# Install Zinit automatically if it's not already present.
+if [[ ! -f "$zinit_home/zinit.zsh" ]]; then
+  echo "🔧 Installing Zinit plugin manager..."
+  command git clone https://github.com/zdharma-continuum/zinit.git "$zinit_home" \
+    && echo "✅ Zinit installed." || echo "❌ Failed to install Zinit."
+fi
+
+# Source Zinit to make it available.
+source "$zinit_home/zinit.zsh"
+
+# --- Plugin Loading ---
+# Load all plugins in a single, declarative block.
+# `lucid` reduces output, `depth=1` does a shallow clone for speed.
+# Use `zinit ice` to apply "ices" (options) to the next `zinit light` command.
+
+# 1. Theme (Highest Priority)
+
+zinit ice depth=1 lucid
+zinit light romkatv/powerlevel10k
+
+# 2. Core Functionality (Load immediately but asynchronously)
+
+zinit ice lucid # No 'wait' for syntax highlighting, as it must load before the prompt is drawn.
+zinit light zdharma-continuum/fast-syntax-highlighting
+zinit ice lucid
+zinit light zsh-users/zsh-autosuggestions
+# Defer loading of completions to speed up startup and fix P10k instant prompt.
+zinit ice blockf atpull'zinit creinstall -q .' lucid wait'1' atload"zicompinit; zicdreplay"
+zinit light zsh-users/zsh-completions
+zinit ice lucid
+zinit light junegunn/fzf # Loads fzf and its keybindings (Ctrl-T, Ctrl-R, Alt-C)
+
+# 3. Enhanced Interactivity & Navigation (for tools installed via Nix)
+# This method is more robust than downloading OMZ snippets. It directly
+# initializes the tools once they are available in the PATH.
+zinit ice lucid if'(( ${+commands[atuin]} ))' atload'eval "$(atuin init zsh --disable-up-arrow)"' id-as"atuin"
+zinit snippet /dev/null
+zinit ice lucid if'(( ${+commands[zoxide]} ))' atload'eval "$(zoxide init zsh)"' id-as"zoxide"
+zinit snippet /dev/null
+
+# --- FZF (Fuzzy Finder) Enhancements ---
+# This configuration is applied on top of the defaults loaded by the plugin.
+# It requires `fd` and `bat` to be installed for the best experience.
+if command -v fd >/dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --exclude .git'
+fi
+if command -v bat >/dev/null; then
+  export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border --preview 'bat --style=numbers --color=always --line-range :500 {}'"
+else
+  export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"
+fi
+
+# --- Direnv Integration ---
+# Load direnv hook if the command exists. This allows for per-directory environments.
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
+
+# ==============================================================================
+# ==============================================================================
+# 50 | AGENTIC SELF-HEALING & AI
+# ==============================================================================
+# The intelligent core of the shell. It manages local AI servers, provides a
+# unified interface for different models, and assists with command failures.
+
+# ----------  NEW LLM STACK  ----------
+ollama_blob() {
+  jq -r '.layers[]|select(.mediaType=="application/vnd.ollama.image.model").digest' \
+      ~/.ollama/models/manifests/registry.ollama.ai/library/"$1"/latest \
+    | sed 's/:/-/' | xargs -I{} echo ~/.ollama/models/blobs/{}
+}
+
+start_llama_daemon() {
+  local role="$1" port="$2" model="$3" extra=("${@:4}")
+  local log="$XDG_CACHE_HOME/zsh/${role}.log"
+  mkdir -p "$(dirname "$log")"
+
+  if ! command -v llama-server &>/dev/null; then
+    echo "⚠️  llama-server not found. Cannot start '$role' daemon. Run dependency check or install 'nixpkgs#llama-cpp'."
+    return 1
+  fi
+
+  pgrep -f "llama-server.*--port $port" >/dev/null && return
+
+  until [[ -f "$(ollama_blob "$model")" ]]; do
+    echo "📦 Pulling $model via Ollama …"
+    ollama pull "$model"
+  done
+
+  local file=$(ollama_blob "$model")
+  echo "🚀 Starting $role on :$port"
+  # Temporarily disable job control to immediately disown the process.
+  # This prevents the noisy "terminated" message from appearing if the daemon fails later.
+  setopt NO_MONITOR
+  nohup llama-server -m "$file" -c 4096 -t 4 --host 0.0.0.0 --port "$port" \
+    "${extra[@]}" > "$log" 2>&1 &
+  local pid=$!
+  setopt MONITOR
+
+  sleep 2 # Give it a moment to start or fail
+  if ! kill -0 $pid 2>/dev/null; then
+    echo "❌ Failed to start $role daemon. Check log for errors: $log"
+  fi
+}
+
+# Starts only the default chat daemon for fast, lightweight startup.
+start_llm_stack() {
+  start_llama_daemon chat 8081 phi3
+}
+
+# Starts the full suite of daemons (chat, vision, embeddings).
+start_llm_stack_full() {
+  start_llama_daemon chat   8081 phi3
+  start_llama_daemon vision 8082 moondream --image
+  start_llama_daemon embed  8083 nomic-embed-text --embedding --pooling cls
+}
+
+# auto-start on every shell (lightweight, exits early if already running)
+# NOTE: The following line can conflict with the launchd agent. The agent is designed
+# to keep the stack running globally. This synchronous call blocks shell startup,
+# causing the Powerlevel10k error and a very slow start time.
+#
+# The recommended approach on macOS is to use the persistent background agent.
+# You can install it by running: install_llama_agent
+#
+# [[ -z $ZSH_STARTUP_ONCE ]] && { ZSH_STARTUP_ONCE=1; start_llm_stack; }
+
+# --------------------------------------------------
+# Private LLM back-end helpers
+# --------------------------------------------------
+
+# The multi-daemon stack (start_llm_stack) is started automatically on shell launch.
+# It provides separate endpoints for chat, vision, and embeddings.
+# The aliases `phi3`, `moondream`, and `embed` are configured to use these endpoints.
+
+# ----------  macOS LaunchAgent ----------
+install_llama_agent() {
+  local plist=~/Library/LaunchAgents/home.llama.stack.plist
+  [[ -f $plist ]] && { echo "✅ Agent already installed"; return; }
+
+  mkdir -p ~/Library/LaunchAgents
+  cat > "$plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>         <string>home.llama.stack</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>-c</string>
+    <string>source ${ZDOTDIR:-$HOME/.config/zsh}/.zshrc && start_llm_stack</string>
+  </array>
+  <key>RunAtLoad</key>     <true/>
+  <key>KeepAlive</key>     <true/>
+  <key>StandardOutPath</key><string>/tmp/llama.log</string>
+  <key>StandardErrorPath</key><string>/tmp/llama.log</string>
+</dict>
+</plist>
+EOF
+  launchctl load "$plist"
+  echo "NOTE: The LaunchAgent sources your zshrc. If you move or rename it,"
+  echo "you may need to update and reload the plist at: $plist"
+}
+
+# ----------  aliases ----------
+alias phi3='curl -s http://localhost:8081/v1/chat/completions \
+  -d "{\"messages\":[{\"role\":\"user\",\"content\":\"$*\"}]}" \
+  | jq -r .choices[0].message.content'
+
+alias moondream='curl -s http://localhost:8082/v1/chat/completions \
+  -F file=@- -F prompt="$*"'
+
+alias embed='curl -s http://localhost:8083/v1/embeddings \
+  -d "{\"input\":\"$*\"}" | jq -r .data[0].embedding[0:3]'
+
+# ----------  first run ----------
+# --- Safe API Key Loading (for external services like Gemini) ---
+if [[ -z "$GEMINI_API_KEY" && -f "$HOME/.env" ]]; then
+  export GEMINI_API_KEY="$(grep GEMINI_API_KEY $HOME/.env | cut -d'=' -f2- | tr -d '\"')"
+fi
+
+# --- Agentic Executor: `doas` (Do As AI Says) ---
+# DANGEROUS: This function asks the AI to generate a shell command based on a
+# natural language prompt and then gives you the option to execute it.
+# This is the bridge from AI-as-chatbot to AI-as-collaborator.
+#
+# !! SECURITY WARNING !!
+# Never execute a command unless you fully understand what it does. This function
+# includes a confirmation step to prevent accidental execution.
+#
+# Usage:
+#   doas "find all markdown files in my home dir and zip them up"
+#   doas "kill the process that is using port 3000"
+#
+doas() {
+  if [[ -z "$*" ]]; then
+    echo "Usage: doas \"your natural language command\"" >&2; return 1
+  fi
+  local prompt="$*"
+
+  # Craft a precise prompt for the AI to ensure it only returns a command.
+  local full_prompt="You are a shell command expert. Based on the following request, generate a SINGLE, executable Zsh shell command and nothing else. Do not add any explanation, preamble, or markdown formatting. Just the raw command. Request: '$prompt'"
+
+  # Get the command from the AI using our unified `llm` interface.
+  # We prefer a powerful model like Gemini for this, but will fall back.
+  local suggested_command
+  local temp_file=$(mktemp)
+  # Ensure temp file is removed when the function returns
+  trap "rm -f $temp_file" RETURN
+
+  echo "🤖 ${BOLD}AI suggests running:${RESET}"
+  printf "   \`${CYAN}"
+
+  # Stream the output to the terminal while also capturing it to a temp file.
+  if command -v gemini-cli >/dev/null; then
+    llm -m gemini "$full_prompt" | tee "$temp_file"
+  else
+    llm "$full_prompt" | tee "$temp_file"
+  fi
+
+  # Close the command string and add a newline
+  printf "${RESET}\`\n"
+
+  # Read the complete, captured command from the temp file.
+  suggested_command=$(<"$temp_file")
+
+  if [[ -z "$suggested_command" ]]; then
+    echo "❌ AI did not return a command. Please try rephrasing your request."
+    return 1
+  fi
+
+  # The critical human-in-the-loop confirmation step.
+  read -k1 "REPLY?Execute this command? [y/N] "; echo
+  if [[ "${REPLY}" =~ ^[Yy]$ ]]; then
+    echo "🚀 Executing..."
+    # Use `eval` to execute the string as a command.
+    eval "$suggested_command"
+  else
+    echo "Execution aborted by user."
+  fi
+}
+
+# --- AI Command Chaining: `chain-ai` ---
+# Give the AI a multi-step goal and approve its plan.
+# Usage: chain-ai "clone the lsd repo, build it, and install it"
+chain-ai() {
+  local goal="$*"
+  local prompt="You are a shell automation expert. Based on the following goal, create a numbered list of shell commands to achieve it. Each command should be on a new line. Goal: '$goal'"
+
+  echo "🤖 Generating a plan for: $goal..."
+  local plan
+  local temp_file=$(mktemp)
+  trap "rm -f $temp_file" RETURN
+
+  # Stream the plan to the user while capturing it.
+  echo "📝 AI has proposed the following plan:"
+  printf "${CYAN}"
+  llm -m gemini "$prompt" | tee "$temp_file"
+  printf "${RESET}"
+
+  plan=$(<"$temp_file")
+
+  if [[ -z "$plan" ]]; then echo "❌ AI failed to generate a plan."; return 1; fi
+
+  read -k1 "REPLY?Begin executing this plan step-by-step? [y/N] "; echo
+  if [[ ! "${REPLY}" =~ ^[Yy]$ ]]; then echo "Plan aborted."; return 0; fi
+
+  # Execute each line of the plan with confirmation.
+  local step_num=1
+  while IFS= read -r cmd; do
+    # Skip empty lines or non-command lines
+    [[ -z "$cmd" || ! "$cmd" =~ ^[0-9]+\. ]] && continue
+
+    local clean_cmd=$(echo "$cmd" | sed 's/^[0-9]\+\. //')
+    echo "\n--- Step ${step_num}: \`${clean_cmd}\` ---"
+    read -k1 "REPLY?Execute? (y/N/s)kip/(a)bort all "; echo
+    case "$REPLY" in
+      [Yy]) eval "$clean_cmd" ;;
+      [Ss]) echo "Skipping step." ;;
+      [Aa]) echo "Aborting plan."; return 1 ;;
+      *) echo "Skipping step.";;
+    esac
+    step_num=$((step_num + 1))
+  done <<< "$plan"
+
+  echo "✅ Plan finished."
+}
+
+llm() {
+  local model_arg=""
+  # Simple argument parsing: check for a model flag like -m <model>
+  if [[ "$1" == "-m" && -n "$2" ]]; then
+    model_arg="$2"
+    shift 2 # Consume the flag and model name
+  fi
+  local prompt="${1:-$(cat -)}" # Read from argument or stdin
+
+  # --- Routing Logic ---
+  case "$model_arg" in
+    "gemini")
+      # Route to Gemini for powerful, general-purpose tasks
+      echo "🧠 Querying Gemini..." >&2
+      _llm_gemini "$prompt"
+      ;;
+    "local"|*)
+      # Default to local models. Prioritize high-performance llama.cpp if running.
+      if pgrep -f "llama.cpp/server" >/dev/null; then
+        echo "🧠 Querying Llama.cpp server..." >&2
+        _llm_llamacpp "$prompt"
+      elif pgrep -x "ollama" >/dev/null; then
+        echo "🧠 Querying Ollama (${model_arg:-llama3})..." >&2
+        _llm_ollama "$prompt" "$model_arg"
+      else
+        echo "💡 No local LLM server is running. Starting Ollama..."
+        _llm_ollama "$prompt" "$model_arg" # _llm_ollama will auto-start the server
+      fi
+      ;;
+  esac
+}
+
+# --- Backend Helper Functions (prefixed with _) ---
+
+# Helper for Ollama
+_llm_ollama() {
+  local prompt="$1"
+  local model="${2:-llama3}" # Default to llama3 if no specific model is passed
+  pgrep -x "ollama" >/dev/null || start_ollama
+  # Use --no-buffer to get immediate output for streaming
+  curl -s --no-buffer http://127.0.0.1:11434/api/generate \
+    -d "{\"model\":\"$model\",\"prompt\":${(qq)prompt},\"stream\":true}" |
+    while IFS= read -r line; do
+      # Extract the content and print it without a newline to stream tokens
+      echo "$line" | jq -r '.response // empty' | tr -d '\n'
+    done
+}
+
+# Helper for Llama.cpp server
+_llm_llamacpp() {
+  local prompt="$1"
+  # The llama.cpp server uses a different API format (OpenAI compatible)
+  curl -s --no-buffer http://127.0.0.1:8080/v1/chat/completions \
+    -H "Content-Type: application/json" \
+    -d "{\"messages\":[{\"role\":\"user\",\"content\":${(qq)prompt}}],\"model\":\"local-model\",\"stream\":true}" |
+    grep '^data:' |
+    sed 's/^data: //' |
+    while IFS= read -r line; do
+      # The stream can end with [DONE]
+      if [[ "$line" != "[DONE]" ]]; then
+        echo "$line" | jq -r '.choices[0].delta.content // empty' | tr -d '\n'
+      fi
+    done
+}
+
+# Helper for Gemini
+_llm_gemini() {
+  local prompt="$1"
+  if ! command -v gemini-cli >/dev/null; then
+    echo "❌ 'gemini-cli' not found. Ensure it's installed via Nix dependency check." >&2; return 1
+  fi
+  # Use the --stream flag for real-time output
+  gemini-cli --stream "$prompt"
+}
+
+# --- Server Management ---
+start_ollama() {
+  if ! pgrep -x "ollama" >/dev/null; then
+    echo "🚀 Starting Ollama service..."
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      # On macOS, it's best to open the app and wait for it to be ready.
+      if open -g "Ollama"; then
+        # Wait up to 10 seconds for the service to become available.
+        for i in {1..10}; do curl -s http://127.0.0.1:11434/ >/dev/null && break; sleep 1; done
+      fi
+    else
+      # On Linux, run the service in the background.
+      (nohup ollama serve >/dev/null 2>&1 &) && sleep 2
+    fi
+
+    if pgrep -x "ollama" >/dev/null; then echo "✅ Ollama service started."; else echo "❌ Failed to start Ollama. Please start it manually."; fi
+  else
+    echo "✅ Ollama service is already running."
+  fi
+}
+
+# To start llama.cpp, you must have it compiled.
+# Usage: start_llamacpp "/path/to/your/model.gguf"
+start_llamacpp() {
+  local model_path="$1"
+
+  if ! command -v llama-server >/dev/null; then
+    echo "❌ 'llama-server' not found. Ensure 'nixpkgs#llama-cpp' is installed in your profile." >&2
+    return 1
+  fi
+  if [[ ! -f "$model_path" ]]; then
+    echo "❌ Model file not found at '$model_path'." >&2; return 1
+  fi
+  if pgrep -f "llama.cpp/server" >/dev/null; then
+    echo "✅ Llama.cpp server is already running."
+  else
+    echo "🚀 Starting Llama.cpp server with model: $(basename $model_path)..."
+    (nohup llama-server -m "$model_path" --host 0.0.0.0 --port 8080 >/dev/null 2>&1 &) && sleep 3
+    pgrep -f "llama.cpp/server" >/dev/null && echo "✅ Llama.cpp server started." || echo "❌ Failed to start Llama.cpp server."
+  fi
+}
+
+# --- Command Failure Agent ---
+typeset -g ZSH_FAILURE_COUNT=0
+_command_failure_agent() {
+  if (( $? != 0 )); then ZSH_FAILURE_COUNT=$((ZSH_FAILURE_COUNT + 1)); else ZSH_FAILURE_COUNT=0; fi
+  if (( ZSH_FAILURE_COUNT >= 2 )); then # Trigger after 2 failures
+    local last_cmd="${history[$HISTCMD]}"
+    echo "\n💡 Command failed: \`${last_cmd}\`"
+    read -k1 "REPLY?🤖 Ask AI for help? [y/N] "; echo
+    if [[ "${REPLY}" =~ ^[Yy]$ ]]; then
+      # Use the unified `llm` command to get help
+      llm "Explain the error in the zsh command \`$last_cmd\` and suggest a fix."
+    fi
+    ZSH_FAILURE_COUNT=0 # Reset after offering help
+  fi
+}
+autoload -U add-zsh-hook
+add-zsh-hook precmd _command_failure_agent
+
+# ==============================================================================
+# 70 | DIAGNOSTICS & HEALTH DASHBOARD
+# ==============================================================================
+# Provides a comprehensive, on-demand report on system health.
+
+# --- Essential Tools Definition ---
+# This associative array maps tool names to their descriptions.
+# It's used by the self-healing agent and the health dashboard.
+typeset -A ESSENTIAL_TOOLS=(
+  [git]="Git Version Control"
+  [nix]="Nix Package Manager"
+  [nvim]="Neovim Editor"
+  [fzf]="Fuzzy Finder"
+  [bat]="Cat Clone with Syntax Highlighting"
+  [lsd]="LS Deluxe (ls replacement)"
+  [fd]="Find replacement"
+  [jq]="JSON Processor"
+)
+
+# --- Health Check Sub-Routines ---
+_check_network() { ping -c 1 -W 1 8.8.8.8 &>/dev/null && echo "🌍 Network: Connected" || echo "🌍 Network: Disconnected"; }
+_check_disk_space() {
+  echo "💾 Disk Space:"
+  df -h / "$HOME" /nix/store 2>/dev/null | awk 'NR>1 {printf "   - %-15s %s\n", $6, $5}'
+}
+_check_system_resources() {
+  echo "💻 System Resources:"
+  case "$OSTYPE" in
+    darwin*) echo "   - Memory: $(vm_stat | awk '/Pages free/ {free=$3} /Pages active/ {active=$3} /Pages inactive/ {inactive=$3} /Pages wired/ {wired=$3} END { printf "%.0f%% Used", (active+inactive+wired)*100/(free+active+inactive+wired) }')" ;;
+    linux*) echo "   - Memory: $(free -m | awk 'NR==2{printf "%.0f%% Used", $3*100/$2 }')" ;;
+  esac
+  echo "   - Top 3 CPU Processes:"
+  ps -eo %cpu,comm --sort=-%cpu | head -n 4 | tail -n 3 | sed 's/^/     /'
+}
+_check_essential_tools() {
+  echo "🛠️  Essential Tools Status:"
+  for tool desc in "${(@kv)ESSENTIAL_TOOLS}"; do
+    command -v "$tool" &>/dev/null && echo "   [✅] $tool" || echo "   [❌] $tool"
+  done
+}
+
+# --- Main Health Dashboard Function (with Caching) ---
+healthcheck() {
+  local cache_file="$XDG_CACHE_HOME/zsh/healthcheck.cache"
+  local cache_ttl=300 # 5 minutes in seconds
+
+  # Check if a valid cache exists. `(#qN.m-5)` checks for a file modified in the last 5 minutes.
+  if [[ -f "$cache_file" && -n "$cache_file"(#qN.m-5) ]]; then
+    echo "✅ Displaying cached report (run 'healthcheck --force' to refresh)."
+    cat "$cache_file"
+    return
+  fi
+
+  # If no cache, generate the report and save it.
+  # The `tee` command both prints to the terminal and saves to the cache file.
+  {
+    echo "\n--== System Health & Diagnostics (Live Report) ==--"
+    _check_network
+    _check_disk_space
+    _check_system_resources
+    _check_essential_tools
+    echo "\n--== End of Report ==--"
+  } | tee "$cache_file"
+}
+
+# Allow forcing a refresh by ignoring the cache.
+if [[ "$1" == "--force" ]]; then
+  rm -f "$XDG_CACHE_HOME/zsh/healthcheck.cache"
+fi
+# ==============================================================================
+# 80 | DYNAMIC INTERFACE & HEADS-UP DISPLAY (HUD)
+# ==============================================================================
+# This section moves beyond a static prompt, creating a dynamic, context-aware
+# interface and an on-demand "Heads-Up Display" for critical system info.
+
+# --- Powerlevel10k Theme ---
+# P10k is the primary, high-performance interface.
+if (( $+functions[p10k] )); then
+  [[ -f "$ZDOTDIR/.p10k.zsh" ]] && source "$ZDOTDIR/.p10k.zsh"
+else
+  # --- Dynamic Fallback Prompt (if P10k is missing) ---
+  echo "⚠️ Powerlevel10k not found. Using dynamic fallback prompt."
+  autoload -U colors && colors; autoload -Uz vcs_info
+  zstyle ':vcs_info:*' enable git; zstyle ':vcs_info:git:*' formats 'on  %b'
+  precmd() { vcs_info }
+  PROMPT="╭─%F{blue}%n@%m%f in %F{green}%~%f \${vcs_info_msg_0_}
+╰─%F{red}%#%f "
+fi
+
+# --- HUD Helper: AI Service Health Check (stub) ---
+# The `hud` command calls this function.
+llm-health() {
+  _check_daemon_status() {
+    local role=$1 port=$2 model=$3
+    local log_file="$XDG_CACHE_HOME/zsh/${role}.log"
+    printf "  - %-7s (%-16s): " "$role" "$model"
+    if pgrep -f "llama-server.*--port $port" >/dev/null; then
+      echo "✅ Online"
+    else
+      local reason
+      # Grab the last non-empty line from the log to show the reason for failure.
+      reason=$(grep . "$log_file" 2>/dev/null | tail -n 1 | cut -c 1-80)
+      if [[ -n "$reason" ]]; then
+        echo "❌ Offline. Reason: $reason"
+      else
+        echo "❌ Offline. (No log found or empty)"
+      fi
+    fi
+  }
+  _check_daemon_status "chat"   8081 "phi3"
+  _check_daemon_status "vision" 8082 "moondream"
+  _check_daemon_status "embed"  8083 "nomic-embed-text"
+  printf "  - %-7s (%-16s): " "Ollama" "Service"
+  pgrep -x "ollama" >/dev/null && echo "✅ Online" || echo "❌ Offline"
+}
+
+# --- Heads-Up Display (HUD) Command: `hud` ---
+# An innovative, on-demand overlay showing critical system and project status.
+# It's like a system dashboard you can summon and dismiss instantly.
+# Bound to Alt+H for quick access.
+hud() {
+  # Save cursor position and clear the screen
+  tput smcup; tput civis; clear
+
+  # Create temporary files for columns securely
+  local col1_file=$(mktemp)
+  local col2_file=$(mktemp)
+  local col3_file=$(mktemp)
+  # Ensure temp files are cleaned up on exit/interrupt
+  trap "rm -f $col1_file $col2_file $col3_file; tput cnorm; tput rmcup" EXIT INT TERM
+
+  # --- Render HUD ---
+  # Column 1: System & Network
+  {
+    echo "--- 💻 System ---"
+    _check_network
+    _check_disk_space | sed 's/^/  /'
+    echo "\n--- 🧠 Top Processes ---"
+    ps -eo %mem,%cpu,comm --sort=-%mem | head -n 6 | tail -n 5 | sed 's/^/  /'
+  } | column -t | sed 's/^/  /' > "$col1_file"
+
+  # Column 2: Git & Project
+  {
+    echo "--- 🌳 Git Project ---"
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+      echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+      echo "\n--- Recent Commits ---"
+      git log --oneline -n 5 | sed 's/^/  /'
+      echo "\n--- Status ---"
+      git status -sb | sed 's/^/  /'
+    else
+      echo "Not a git repository."
+    fi
+  } > "$col2_file"
+
+  # Column 3: AI Services
+  {
+    echo "--- 🤖 AI Services ---"
+    llm-health
+  } > "$col3_file"
+
+  # Combine columns side-by-side
+  paste "$col1_file" "$col2_file" "$col3_file" | column -s $'\t' -t
+
+  # --- Wait for keypress to dismiss ---
+  echo "\n\n${(r:$(tput cols):─)}"
+  echo "✅ HUD Active. Press any key to dismiss."
+  read -k 1
+
+  # Restore screen and cursor
+  tput cnorm; tput rmcup
+  trap - EXIT INT TERM # Clear the trap
+}
+zle -N hud
+bindkey '^[h]' hud # Binds Alt+H to summon the HUD
+
+# ==============================================================================
+# 90 | FINALIZATION, PROFILING & INTROSPECTION
+# ==============================================================================
+# This final section not only sources overrides but also profiles the shell's
+# own startup performance and provides powerful tools for introspection.
+
+# --- User-Specific Overrides ---
+# Sourced last to allow overriding any setting in this file.
+[[ -f "$ZDOTDIR/.zshrc.local" ]] && source "$ZDOTDIR/.zshrc.local"
+[[ -f "$ZDOTDIR/.zshrc.work" ]] && source "$ZDOTDIR/.zshrc.work"
+[[ -f "$ZDOTDIR/.zshrc.$(hostname)" ]] && source "$ZDOTDIR/.zshrc.$(hostname)"
+
+# --- Shell Performance Profiler ---
+# This function analyzes the Zsh startup time and identifies slow components.
+# It requires `zsh/zprof` which is a built-in profiler.
+zprof_report() {
+  zmodload zsh/zprof
+  echo "\n--- Zsh Startup Profile ---"
+  zprof | head -n 15
+  echo "--------------------------"
+}
+
+# --- Shell Introspection & Session Metrics: `shell-stats` ---
+# Provides a detailed report on the current shell's state and your usage patterns.
+shell-stats() {
+  echo "\n--- Shell State Report ---"
+  echo "Zsh Version: $ZSH_VERSION"
+  echo "ZDOTDIR: $ZDOTDIR"
+  echo "Startup Time: ${ZSH_STARTUP_MS:-N/A}ms"
+  echo "\n--- Loaded Plugins (via Zinit) ---"
+  zinit list --loaded | awk '{print "  - " $1}' | column
+  echo "\n--- Session Command Metrics ---"
+  fc -l 1 | awk '{CMD[$2]++;count++;}END{ for (a in CMD)print CMD[a] " " CMD[a]/count*100 "% " a;}' | sort -rn | head -n 10 | sed 's/^/  /'
+  echo "\n--- AI Services ---"
+  llm-health 2>/dev/null
+  echo "------------------------"
+}
+
+# --- Dynamic Welcome Message ------------------------------------------
+if [[ -n "$ZSH_STARTUP_TIME_MS" ]]; then
+  integer end_time_ms=$((EPOCHSECONDS * 1000 + EPOCHREALTIME_NSEC / 1000000))
+  export ZSH_STARTUP_MS=$((end_time_ms - ZSH_STARTUP_TIME_MS))
+  
+  if (( ZSH_STARTUP_MS > 500 )); then
+    echo "🐢 Shell ready in ${ZSH_STARTUP_MS}ms. Run 'zprof_report' to profile."
+  else
+    echo "🚀 Shell ready in ${ZSH_STARTUP_MS}ms."
+  fi
+  # The self-healing check was moved to the end of the file to avoid conflicts with the llm function
+  # Optional: fire-and-forget "quote of the day"
+  ( sleep 1; llm "Give me a short, witty, one-sentence quote for a programmer's terminal." 2>/dev/null | fold -s -w "$(tput cols)" | sed 's/^/💡 /' ) &|
+fi
+unset ZSH_STARTUP_TIME_MS
+# ----------------------------------------------------------------------

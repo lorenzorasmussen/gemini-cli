@@ -1,0 +1,20 @@
+description = "Manages Nix packages and environments on macOS."
+prompt = """
+**NIX PACKAGE AND ENVIRONMENT MANAGEMENT (macOS)**
+
+**Phase 1: Nix Environment Status**
+Nix version: !{nix --version}
+Nix channels: !{nix-channel --list}
+
+**Phase 2: Installed Packages**
+User profile packages: !{nix-env -q}
+System-wide packages: !{nix-store -qR /run/current-system/sw 2>/dev/null || echo "Not NixOS, checking user profile" && nix-env -q}
+
+**Phase 3: Garbage Collection Potential**
+!{nix-store --gc --dry-run 2>&1 | grep "would delete"}
+
+**Phase 4: Flake Status (if applicable)**
+Local flakes: !{find . -name "flake.nix" -type f}
+
+Based on this Nix environment overview, provide recommendations for package management, garbage collection, and potential flake-based development.
+"""

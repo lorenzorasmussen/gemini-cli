@@ -3,6 +3,7 @@
 !.env.example
 
 # Ignore sensitive credentials and tokens
+google_accounts.json
 oauth_creds.json
 token.json
 credentials.json
@@ -10,6 +11,11 @@ credentials.json
 # Ignore logs and cache
 logs/
 cache/
+.pytest_cache/
+checkpoints/
+history/
+plans/
+tmp/
 
 # IDE and OS specific files
 .DS_Store
@@ -20,6 +26,9 @@ cache/
 
 # Ignore nested git repository
 gemini-autonomous/
+
+# Installation ID
+installation_id
 
 # Do not ignore the flake lock file
 !flake.lock

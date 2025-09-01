@@ -1,0 +1,15 @@
+description = "Prepares the deployment environment."
+prompt = """
+Deployment preparation started.
+
+**Git Status:**
+!{git status --porcelain}
+
+**Branch Info:**
+!{git branch --show-current}
+
+**Uncommitted Changes:**
+!{git diff --stat}
+
+Please review the deployment readiness.
+"""

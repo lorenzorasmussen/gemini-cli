@@ -1,0 +1,32 @@
+description = "Complete NixOS system lifecycle management"
+prompt = """
+**NIXOS SYSTEM LIFECYCLE AUTOMATION**
+
+**Phase 1: System State Assessment**
+System generation: !{nixos-version}
+Current configuration: !{readlink /run/current-system}
+Rollback availability: !{ls -la /nix/var/nix/profiles/system-*-link | tail -5}
+
+**Phase 2: Configuration Analysis**
+Flake status: !{nix flake check /etc/nixos 2>&1}
+Configuration diff: !{nixos-rebuild dry-build --show-trace 2>&1 | head -20}
+Dependency updates: !{nix flake update /etc/nixos --dry-run 2>&1}
+
+**Phase 3: Package Management**
+Installed packages: !{nix-env -qa | wc -l}
+Garbage collection potential: !{nix-store --gc --dry-run 2>&1 | grep "would delete"}
+Store optimization: !{nix-store --optimise --dry-run 2>&1}
+
+**Phase 4: System Optimization**
+Boot time analysis: !{systemd-analyze blame | head -10}
+Service failures: !{systemctl --failed}
+Memory usage: !{free -h && nix-store --gc --dry-run | grep "would free"}
+
+**Phase 5: Deployment Strategy**
+Based on this comprehensive NixOS analysis, provide:
+1. Safe system upgrade path with rollback plan
+2. Configuration optimization recommendations
+3. Package cleanup strategy
+4. Performance improvement suggestions
+5. Next maintenance window recommendations
+"""

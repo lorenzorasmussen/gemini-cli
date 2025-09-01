@@ -1,0 +1,21 @@
+description = "Multi-machine NixOS deployment workflow"
+prompt = """
+**MULTI-MACHINE NIXOS DEPLOYMENT**
+
+**Step 1: Machine Registry**
+Registered machines: !{cat ~/.nix-machines.json | jq '.machines[] | {name, host, config}'}
+
+**Step 2: Configuration Diff Analysis**
+!{for machine in $(jq -r '.machines[].name' ~/.nix-machines.json); do
+  echo "=== $machine ==="
+  nixos-rebuild dry-build --target-host "$machine" --show-trace 2>&1 | head -20
+done}
+
+**Step 3: Deployment Status**
+!{parallel-ssh -h ~/.nix-hosts 'systemctl is-system-running' | column -t}
+
+**Step 4: Batch Configuration Sync**
+!{git log --oneline -5 configurations/}
+
+Analyze deployment readiness across all registered machines. Recommend deployment sequence and flag any configuration conflicts.
+"""

@@ -1,0 +1,12 @@
+
+# Created by `pipx` on 2025-06-16 16:49:33
+export PATH="$PATH:/Users/lorenzorasmussen/.local/bin"
+
+##
+# Your previous /Users/lorenzorasmussen/.zprofile file was backed up as /Users/lorenzorasmussen/.zprofile.macports-saved_2025-08-25_at_02:14:33
+##
+
+# MacPorts Installer addition on 2025-08-25_at_02:14:33: adding an appropriate PATH variable for use with MacPorts.
+export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
+# Finished adapting your PATH environment variable for use with MacPorts.
+

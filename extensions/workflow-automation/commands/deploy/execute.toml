@@ -1,0 +1,15 @@
+description = "Executes the deployment."
+prompt = """
+Deployment execution started.
+
+**Build Status:**
+!{make build 2>&1 || echo "Build failed"}
+
+**Tests:**
+!{npm test 2>&1 || echo "Tests failed"}
+
+**Docker Status:**
+!{docker-compose ps}
+
+Please confirm deployment execution.
+"""

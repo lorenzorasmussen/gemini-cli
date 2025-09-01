@@ -1,0 +1,37 @@
+name: Multi-Step Gemini Workflow
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_type:
+        description: 'Workflow type'
+        required: true
+        type: choice
+        options:
+          - 'security-audit'
+          - 'performance-optimization' 
+          - 'dependency-update'
+
+jobs:
+  step-1-analysis:
+    runs-on: ubuntu-latest
+    outputs:
+      analysis_result: ${{ steps.analyze.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/run-gemini-cli@v1
+        id: analyze
+        with:
+          prompt: |
+            /security:scan
+            Analyze codebase for: ${{ github.event.inputs.workflow_type }}
+            
+  step-2-implementation:
+    needs: step-1-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/run-gemini-cli@v1
+        with:
+          prompt: |
+            Based on analysis: ${{ needs.step-1-analysis.outputs.analysis_result }}
+            /implement:fixes
+            Create pull request with recommended changes.

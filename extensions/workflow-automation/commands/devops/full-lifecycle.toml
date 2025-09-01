@@ -1,0 +1,34 @@
+description = "End-to-end development lifecycle automation"
+prompt = """
+**DEVELOPMENT LIFECYCLE AUTOMATION**
+
+**Stage 1: Code Quality Gates**
+Linting status: !{eslint . --format=json 2>&1 || echo "No ESLint config"}
+Test coverage: !{npm run test:coverage 2>&1 || echo "No tests configured"}
+Security scan: !{npm audit --audit-level=moderate --json 2>&1}
+Dependencies: !{npm outdated --json 2>&1 || echo "Dependencies up to date"}
+
+**Stage 2: Build & Package**
+Build process: !{npm run build 2>&1}
+Bundle analysis: !{ls -la dist/ build/ target/ .next/ 2>/dev/null || ls -la build/ 2>/dev/null}
+Docker status: !{docker images | grep $(basename $(pwd)) || echo "No Docker images"}
+
+**Stage 3: Infrastructure Readiness**  
+Environment variables: !{grep -r "process.env" src/ | wc -l}
+Database status: !{pg_isready 2>&1 || echo "PostgreSQL not available"}
+Redis status: !{redis-cli ping 2>&1 || echo "Redis not available"}
+
+**Stage 4: Deployment Validation**
+Git status: !{git status --porcelain}
+Branch protection: !{git branch --show-current}
+Remote sync: !{git fetch && git status}
+
+**Stage 5: Performance Baseline**
+Current metrics: !{lighthouse --chrome-flags="--headless" http://localhost:3000 --output=json 2>&1 | jq '.categories.performance.score' || echo "No performance data"}
+
+Analyze this complete development lifecycle status. Provide:
+1. GO/NO-GO recommendation
+2. Specific risk mitigation steps
+3. Performance optimization suggestions  
+4. Next action items with priority ranking
+"""

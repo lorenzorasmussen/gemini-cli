@@ -1,0 +1,49 @@
+description = "Complete Nix development environment setup"
+prompt = """
+**NIX DEVELOPMENT ENVIRONMENT WORKFLOW**
+
+This command helps you set up and verify your Nix-based development environment. It provides specific checks and recommendations for common development scenarios.
+
+**Phase 1: Environment Detection**
+*   **Operating System:** !{uname -s}
+    *   **macOS Version:** !{sw_vers -productVersion 2>/dev/null || echo "Not macOS"}
+    *   **Homebrew Installed:** !{command -v brew &> /dev/null && echo "Yes" || echo "No"}
+*   **Nix Version:** !{nix --version}
+    *   **Use Case:** Verify your Nix installation and version for compatibility.
+
+**Phase 2: Flake Analysis**  
+*   **Available Flakes in Current Directory:** !{find . -maxdepth 2 -name "flake.nix" -type f}
+    *   **Use Case:** Identify local Nix flakes for project-specific environments.
+*   **Flake Inputs (from current directory):** !{nix flake metadata . --json | jq '.locks.nodes' 2>/dev/null || echo "No flake.nix found or error"}
+    *   **Use Case:** Understand the dependencies and channels used by your project's flake.
+*   **Development Shell Dry Run:** !{nix develop --dry-run 2>&1 || echo "Dry run failed, check flake.nix"}
+    *   **Use Case:** Preview the environment that `nix develop` would create without actually entering it.
+*   **Package Status (from current flake):** !{nix flake check 2>&1 || echo "Flake check failed, potential issues"}
+    *   **Use Case:** Verify the integrity and buildability of your flake's packages.
+
+**Phase 3: Environment Activation & Tooling**
+*   **Entering Development Shell:** To activate the full development environment, run `nix develop` in your terminal.
+*   **Environment Packages (inside `nix develop` shell):**
+    *   **Node.js Version:** !{which node &> /dev/null && node --version || echo "Node.js not found"}
+    *   **Python Version:** !{which python &> /dev/null && python --version || echo "Python not found"}
+    *   **Rust Version:** !{which rustc &> /dev/null && rustc --version || echo "Rust not found"}
+    *   **Go Version:** !{which go &> /dev/null && go version || echo "Go not found"}
+    *   **Git Installed:** !{command -v git &> /dev/null && echo "Yes" || echo "No"}
+    *   **Docker Installed:** !{command -v docker &> /dev/null && echo "Yes" || echo "No"}
+    *   **Use Case:** Confirm essential development tools are available and at the correct versions within your Nix shell.
+
+**Phase 4: Integration Setup**
+*   **Gemini CLI in Environment:** !{which gemini &> /dev/null && echo "Gemini CLI found in PATH" || echo "Gemini CLI not found in PATH. Run 'nix develop' to enter the shell where it's available."}
+    *   **Use Case:** Verify that the Gemini CLI is correctly integrated into your development environment.
+*   **Ollama Status:** !{command -v ollama &> /dev/null && ollama serve &> /dev/null && echo "Ollama server running" || echo "Ollama not running or not found. Start with 'ollama serve' or install it."}
+    *   **Use Case:** Check the status of your local LLM server for AI development.
+
+**Recommendations & Next Steps:**
+Based on this Nix flake analysis, review the output for any missing tools or failed checks. If issues are found:
+1.  **Check your `flake.nix`:** Ensure all required `buildInputs` and `shellHook` configurations are correct.
+2.  **Run `nix develop`:** To enter the fully configured development shell.
+3.  **Install missing tools:** If a tool is not found, add it to your `flake.nix` `buildInputs`.
+4.  **Address flake errors:** Resolve any errors reported by `nix flake check` or `nix develop --dry-run`.
+
+This comprehensive check helps ensure your Nix development environment is ready for action.
+"""

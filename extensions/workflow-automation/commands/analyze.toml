@@ -1,0 +1,15 @@
+description = "Analyzes the current system or project state."
+prompt = """
+System analysis started.
+
+**Memory Usage:**
+!{free -h}
+
+**Disk Usage:**
+!{df -h}
+
+**Top CPU processes:**
+!{ps aux --sort=-%cpu | head -10}
+
+Please analyze this system health data.
+"""

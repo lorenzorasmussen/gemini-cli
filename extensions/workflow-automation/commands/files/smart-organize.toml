@@ -1,0 +1,26 @@
+description = "Multi-step file organization workflow"
+prompt = """
+**INTELLIGENT FILE ORGANIZATION WORKFLOW**
+
+**Step 1: Directory Analysis**
+Target directory: {{args}}
+File count by type: !{find "{{args}}" -type f | sed 's/.*\.//' | sort | uniq -c | sort -nr}
+Large files (>50MB): !{find "{{args}}" -type f -size +50M -exec ls -lh {} \;}
+Recent modifications: !{find "{{args}}" -type f -mtime -7 -exec ls -lt {} \;}
+
+**Step 2: Duplicate Detection**
+!{find "{{args}}" -type f -exec md5sum {} \; | sort | uniq -d -w32}
+
+**Step 3: Organization Strategy**
+Directory structure analysis: !{tree "{{args}}" -d -L 3 | head -20}
+Storage usage: !{du -sh "{{args}}"/* | sort -hr}
+
+**Step 4: Safe Organization Plan**
+Based on this analysis, create a detailed file organization plan with:
+1. Safe file movement commands (using mv, not rm)
+2. Directory structure recommendations  
+3. Duplicate handling strategy
+4. Backup recommendations before execution
+
+Provide specific shell commands for implementation.
+"""

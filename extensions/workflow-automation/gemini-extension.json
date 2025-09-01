@@ -1,0 +1,14 @@
+{
+  "name": "workflow-automation",
+  "version": "1.0.0", 
+  "mcpServers": {
+    "workflow-state": {
+      "command": "node",
+      "args": ["mcp-servers/workflow-state-server.js"],
+      "auto_start": true,
+      "health_check": true
+    }
+  },
+  "contextFileName": "WORKFLOW_CONTEXT.md",
+  "excludeTools": ["run_shell_command(rm -rf)"]
+}

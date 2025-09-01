@@ -1,0 +1,19 @@
+description = "Verifies security best practices in workflow TOML files."
+prompt = """
+**SECURITY WORKFLOW VERIFICATION**
+
+Analyzing workflow TOML files for security best practices...
+
+**Checking for 'excludeTools' usage:**
+!{grep -r "excludeTools" ~/.gemini/extensions/workflow-automation/commands/}
+
+**Checking for 'rm -rf' in shell commands (requires manual review):**
+!{grep -r "rm -rf" ~/.gemini/extensions/workflow-automation/commands/}
+
+**Checking for sensitive information in prompts (requires manual review):**
+!{grep -r -E "(password|secret|api_key)" ~/.gemini/extensions/workflow-automation/commands/}
+
+**Recommendation:** Ensure all sensitive operations are sandboxed (e.g., Docker containers) and that `excludeTools` is properly configured to prevent unintended actions.
+
+Please review the findings and ensure your workflows adhere to security best practices.
+"""

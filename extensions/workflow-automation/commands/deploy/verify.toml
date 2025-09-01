@@ -1,0 +1,15 @@
+description = "Verifies the deployment."
+prompt = """
+Deployment verification started.
+
+**Service Health:**
+!{curl -f http://localhost:3000/health 2>&1 || echo "Service unavailable"}
+
+**Database Connectivity:**
+!{pg_isready -h localhost -p 5432 2>&1}
+
+**Application Logs (last 20 lines):**
+!{tail -n 20 /var/log/app.log}
+
+Please verify the deployment status.
+"""

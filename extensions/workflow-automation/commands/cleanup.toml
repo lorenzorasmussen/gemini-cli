@@ -1,0 +1,12 @@
+description = "Cleans up the deployment environment."
+prompt = """
+Deployment cleanup started.
+
+**Temporary files removed:**
+!{rm -rf /tmp/deployment_artifacts}
+
+**Docker images pruned:**
+!{docker system prune -f}
+
+Please confirm cleanup completion.
+"""

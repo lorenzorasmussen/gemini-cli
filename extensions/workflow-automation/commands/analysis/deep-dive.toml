@@ -1,0 +1,13 @@
+description = "Stage 2: Deep technical analysis"
+prompt = """
+**ANALYSIS EXECUTION - STAGE 2**
+
+Based on the previous context preparation, perform deep analysis of: {{args}}
+
+Code complexity: !{find . -name "*.js" -exec wc -l {} + | sort -nr | head -10}
+Dependencies graph: !{npm ls --depth=1 2>&1}
+Test coverage: !{npm run test:coverage 2>&1 || echo "No coverage available"}
+Performance metrics: !{npm run benchmark 2>&1 || echo "No benchmarks configured"}
+
+Provide specific recommendations for: {{args}}
+"""

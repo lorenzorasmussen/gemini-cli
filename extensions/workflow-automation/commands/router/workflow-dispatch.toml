@@ -1,0 +1,43 @@
+description = "Intelligent workflow routing based on context"
+prompt = """
+**WORKFLOW ROUTING ENGINE**
+
+**Context Detection:**
+Project type: !{ls package.json Cargo.toml go.mod setup.py requirements.txt pom.xml 2>/dev/null | head -1}
+Git status: !{git status --porcelain | wc -l} modified files
+Build status: !{ls dist/ build/ target/ .next/ 2>/dev/null | head -1}
+Testing: !{find . -name "*test*" -type f | wc -l} test files
+Documentation: !{find . -name "*.md" -type f | wc -l} markdown files
+
+**Workflow Decision Matrix:**
+Args provided: {{args}}
+
+!{
+case "$(ls package.json Cargo.toml go.mod setup.py 2>/dev/null | head -1)" in
+  "package.json")
+    echo "DETECTED: Node.js project"
+    case "{{args}}" in
+      *deploy*) echo "ROUTE: /node:deploy-workflow" ;;
+      *test*) echo "ROUTE: /node:test-workflow" ;;
+      *security*) echo "ROUTE: /node:security-workflow" ;;
+      *) echo "ROUTE: /node:general-workflow" ;;
+    esac
+    ;;
+  "Cargo.toml")
+    echo "DETECTED: Rust project"  
+    echo "ROUTE: /rust:cargo-workflow"
+    ;;
+  "go.mod")
+    echo "DETECTED: Go project"
+    echo "ROUTE: /go:module-workflow"
+    ;;
+  *)
+    echo "DETECTED: Generic project"
+    echo "ROUTE: /generic:basic-workflow"
+    ;;
+esac
+}
+
+**Recommended Workflow Sequence:**
+Based on detection results, execute the recommended workflow command above.
+"""

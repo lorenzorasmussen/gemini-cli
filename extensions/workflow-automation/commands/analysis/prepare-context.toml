@@ -1,0 +1,11 @@
+description = "Stage 1: Prepare analysis context"
+prompt = """
+**ANALYSIS PREPARATION - STAGE 1**
+
+Project structure: !{find . -type f -name "*.js" -o -name "*.ts" -o -name "*.json" | head -20}
+Recent commits: !{git log --oneline -10}
+Package dependencies: !{cat package.json | jq '.dependencies, .devDependencies'}
+Current branch: !{git branch --show-current}
+
+**CONTEXT SUMMARY:** Prepare detailed technical context. End with: "Ready for Stage 2 analysis. Use /analysis:deep-dive with specific focus areas."
+"""

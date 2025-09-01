@@ -32,17 +32,18 @@
   "context_files": {
     "system_context": "./agents.md",
     "rules_context": "./system.md",
+    "todo_context": "./todo-universal.md",
     "read_on_startup": true,
     "read_on_model_switch": true,
     "read_on_context_reset": true
   },
   "mcpServers": {
     "filesystem": {
-      "command": "nix",
+      "command": "npm",
       "args": [
         "run",
-        "github:modelcontextprotocol/servers#filesystem",
-        "--"
+        "start",
+        "--workspace=@modelcontextprotocol/server-filesystem"
       ],
       "timeout": 15000,
       "trust": false,
@@ -55,140 +56,15 @@
         "delete_file"
       ],
       "description": "Safe filesystem operations with security validation",
-      "auto_start": true,
+      "auto_start": false,
       "health_check": true
-    },
-    "github": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#github",
-        "--"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}"
-      },
-      "timeout": 20000,
-      "trust": false,
-      "includeTools": [
-        "create_issue",
-        "create_pr",
-        "search_repositories",
-        "get_repo_info",
-        "create_branch",
-        "merge_pr"
-      ],
-      "description": "GitHub repository management and automation",
-      "auto_start": true,
-      "health_check": true
-    },
-    "sqlite": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#sqlite",
-        "--"
-      ],
-      "timeout": 25000,
-      "trust": false,
-      "includeTools": [
-        "execute_query",
-        "create_table",
-        "insert_data",
-        "analyze_schema",
-        "backup_database"
-      ],
-      "description": "SQLite database operations and analysis",
-      "auto_start": false,
-      "load_on_demand": true
-    },
-    "postgres": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#postgres",
-        "--"
-      ],
-      "env": {
-        "DATABASE_URL": "${DATABASE_URL}"
-      },
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": [
-        "execute_query",
-        "get_schema",
-        "create_migration",
-        "analyze_performance"
-      ],
-      "description": "PostgreSQL database management for enterprise data",
-      "auto_start": false,
-      "load_on_demand": true
-    },
-    "kubernetes": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#kubernetes",
-        "--"
-      ],
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": [
-        "get_pods",
-        "describe_resource",
-        "apply_manifest",
-        "get_logs",
-        "scale_deployment"
-      ],
-      "description": "Kubernetes cluster management and monitoring",
-      "auto_start": false,
-      "load_on_demand": true
-    },
-    "docker": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#docker",
-        "--"
-      ],
-      "timeout": 25000,
-      "trust": false,
-      "includeTools": [
-        "list_containers",
-        "run_container",
-        "build_image",
-        "inspect_container",
-        "cleanup_images"
-      ],
-      "description": "Docker container lifecycle management",
-      "auto_start": false,
-      "load_on_demand": true
-    },
-    "openapi": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:janwilmake/openapi-mcp-server",
-        "--"
-      ],
-      "timeout": 20000,
-      "trust": false,
-      "includeTools": [
-        "analyze_spec",
-        "generate_client",
-        "validate_response",
-        "test_endpoint"
-      ],
-      "description": "OpenAPI specification analysis and API testing",
-      "auto_start": false,
-      "load_on_demand": true
     },
     "memory": {
-      "command": "nix",
+      "command": "npm",
       "args": [
         "run",
-        "github:modelcontextprotocol/servers#memory",
-        "--"
+        "start",
+        "--workspace=@modelcontextprotocol/server-memory"
       ],
       "timeout": 15000,
       "trust": false,
@@ -199,15 +75,15 @@
         "update_memory"
       ],
       "description": "Persistent memory and knowledge management",
-      "auto_start": true,
+      "auto_start": false,
       "health_check": true
     },
     "time": {
-      "command": "nix",
+      "command": "npm",
       "args": [
         "run",
-        "github:modelcontextprotocol/servers#time",
-        "--"
+        "start",
+        "--workspace=@modelcontextprotocol/server-time"
       ],
       "timeout": 10000,
       "trust": false,
@@ -218,15 +94,15 @@
         "timezone_convert"
       ],
       "description": "Time management and scheduling utilities",
-      "auto_start": true,
+      "auto_start": false,
       "health_check": true
     },
     "git": {
-      "command": "nix",
+      "command": "npm",
       "args": [
         "run",
-        "github:modelcontextprotocol/servers#git",
-        "--"
+        "start",
+        "--workspace=@modelcontextprotocol/server-git"
       ],
       "timeout": 20000,
       "trust": false,
@@ -239,28 +115,8 @@
         "git_status"
       ],
       "description": "Local Git repository management",
-      "auto_start": true,
-      "health_check": true
-    },
-    "npm": {
-      "command": "nix",
-      "args": [
-        "run",
-        "github:modelcontextprotocol/servers#npm",
-        "--"
-      ],
-      "timeout": 30000,
-      "trust": false,
-      "includeTools": [
-        "install_package",
-        "run_script",
-        "list_packages",
-        "update_packages",
-        "audit_security"
-      ],
-      "description": "Node.js package management and security auditing",
       "auto_start": false,
-      "load_on_demand": true
+      "health_check": true
     },
     "python": {
       "command": "nix",
@@ -282,9 +138,13 @@
       "load_on_demand": true
     },
     "security_scanner": {
-      "command": "python3",
+      "command": "nix",
       "args": [
-        ".gemini/scripts/lorenzo-security-mcp.py"
+        "run",
+        "github:modelcontextprotocol/servers#python",
+        "--",
+        "python3",
+        ".gemini/scripts/lorenzo-security-server.py"
       ],
       "timeout": 30000,
       "trust": false,
@@ -297,19 +157,6 @@
       "description": "Lorenzo's Nordic security framework and AI refactoring",
       "auto_start": true,
       "health_check": true
-    },
-    "context7": {
-      "httpUrl": "https://mcp.context7.com/mcp",
-      "timeout": 10000,
-      "trust": false,
-      "includeTools": [
-        "get_docs",
-        "search_docs",
-        "get_examples"
-      ],
-      "description": "Always up-to-date framework and library documentation",
-      "auto_start": true,
-      "health_check": true
     }
   },
   "security": {
@@ -317,17 +164,46 @@
     "rules": {
       "block_dangerous_commands": true,
       "blocked_commands_list": [
-        "rm -rf", "sudo rm", "format", "dd if=", ":(){ :|:& };:", "chmod 777",
-        "chown root", "sudo chmod", "sudo chown", "kill -9", "killall", "pkill",
-        "shutdown", "reboot", "init 0", "halt", "poweroff", "mkfs", "fdisk"
+        "rm -rf",
+        "sudo rm",
+        "format",
+        "dd if=",
+        ":(){ :|:& };:",
+        "chmod 777",
+        "chown root",
+        "sudo chmod",
+        "sudo chown",
+        "kill -9",
+        "killall",
+        "pkill",
+        "shutdown",
+        "reboot",
+        "init 0",
+        "halt",
+        "poweroff",
+        "mkfs",
+        "fdisk"
       ],
       "protect_directories": true,
       "protected_paths_list": [
-        "/usr", "/etc", "/var", "/System", "/Library", "/bin", "/sbin",
-        "/Applications", "/Volumes", "/boot"
+        "/usr",
+        "/etc",
+        "/var",
+        "/System",
+        "/Library",
+        "/bin",
+        "/sbin",
+        "/Applications",
+        "/Volumes",
+        "/boot"
       ],
       "require_confirmation_for": [
-        "delete", "move", "copy", "git push", "git merge", "npm publish"
+        "delete",
+        "move",
+        "copy",
+        "git push",
+        "git merge",
+        "npm publish"
       ]
     },
     "validation": {
@@ -457,5 +333,14 @@
     "gemma-2-9b",
     "gemma-2-27b",
     "codeglemma-7b"
-  ]
+  ],
+  "hasSeenIdeIntegrationNudge": true,
+  "ideMode": true,
+  "hideBanner": true,
+  "showMemoryUsage": true,
+  "loadMemoryFromIncludeDirectories": true,
+  "folderTrustFeature": true,
+  "skipNextSpeakerCheck": true,
+  "folderTrust": true,
+  "hideTips": true
 }
